@@ -3,7 +3,7 @@ import threading
 from arduino.app_utils import App, Bridge, Logger
 
 # === CONFIGURACIÓN ===
-SETPOINT = 20.0       # Distancia ideal a la pared derecha (cm)
+SETPOINT = 10.0       # Distancia ideal a la pared derecha (cm)
 VEL_CRUCERO = 110     # Velocidad base
 MAX_PWM = 200         # Límite de potencia
 CICLO_TEST = 150      # Muestras para el auto-tuning Twiddle
