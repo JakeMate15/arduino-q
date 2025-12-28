@@ -33,12 +33,12 @@ void avanza(int velA, int velB, int dirA, int dirB) {
 const float VEL_SONIDO = 0.035103f; // Ajustado a valor estándar
 
 unsigned long pulseInManual(uint8_t pin, uint8_t state, unsigned long timeout) {
-    unsigned long start = micros();
-    while (digitalRead(pin) == state) { if (micros() - start > timeout) return 0; }
-    while (digitalRead(pin) != state) { if (micros() - start > timeout) return 0; }
-    unsigned long pulseStart = micros();
-    while (digitalRead(pin) == state) { if (micros() - pulseStart > timeout) return 0; }
-    return micros() - pulseStart;
+  unsigned long start = micros();
+  while (digitalRead(pin) == state) { if (micros() - start > timeout) return 0; }
+  while (digitalRead(pin) != state) { if (micros() - start > timeout) return 0; }
+  unsigned long pulseStart = micros();
+  while (digitalRead(pin) == state) { if (micros() - pulseStart > timeout) return 0; }
+  return micros() - pulseStart;
 }
 
 float distanciaCM(int trig, int echo) {

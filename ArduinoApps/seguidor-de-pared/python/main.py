@@ -1,11 +1,13 @@
 import time
-from arduino.app_utils import App, Bridge
+from arduino.app_utils import App, Bridge, Logger
 
 # === CONFIGURACIÓN ===
 SETPOINT = 20.0       
 VEL_CRUCERO = 110     # Un poco más lento ayuda a que el Twiddle aprenda mejor
 CICLO_TEST = 150      
 MAX_PWM = 200         # Límite de seguridad
+
+logger = Logger("seguidor-de-pared")
 
 class AutoTuner:
     def __init__(self):
@@ -21,7 +23,7 @@ class AutoTuner:
         if self.muestras < CICLO_TEST: return
         
         error_medio = self.error_acumulado / self.muestras
-        print(f">> EVALUANDO: Error Medio: {error_medio:.2f} | Kp: {self.p[0]:.2f} Kd: {self.p[1]:.2f}")
+        logger.info(f"EVALUANDO: Error Medio: {error_medio:.2f} | Kp: {self.p[0]:.2f} Kd: {self.p[1]:.2f}")
         
         i = self.indice
         if self.paso_twiddle == 0:
@@ -54,6 +56,15 @@ def clip(valor, min_v, max_v):
     return max(min(valor, max_v), min_v)
 
 def al_recibir_distancias(izq, centro, der):
+    """Callback invocado por el sketch de Arduino vía Bridge.notify.
+    
+    Implementa control PD con auto-tuning Twiddle para seguir la pared derecha.
+    
+    Args:
+        izq: Distancia sensor izquierdo (no usado, siempre -1)
+        centro: Distancia sensor frontal en cm
+        der: Distancia sensor derecho en cm
+    """
     global error_previo
     
     # --- MÁQUINA DE ESTADOS ---
@@ -96,5 +107,8 @@ def al_recibir_distancias(izq, centro, der):
     if tuner.muestras >= CICLO_TEST:
         tuner.evaluar_desempeno()
 
+logger.info("Registering 'distancias' callback")
 Bridge.provide("distancias", al_recibir_distancias)
+
+logger.info("Starting wall-follower robot...")
 App.run()
