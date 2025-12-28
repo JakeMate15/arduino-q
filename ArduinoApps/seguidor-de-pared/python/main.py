@@ -1,5 +1,7 @@
 import time
 import threading
+import json
+import os
 from arduino.app_utils import App, Bridge, Logger
 
 # === CONFIGURACIÓN ===
@@ -14,6 +16,32 @@ ESTADO_GIRANDO_IZQ = "GIRANDO_IZQ"
 ESTADO_GIRANDO_DER = "GIRANDO_DER"
 
 logger = Logger("seguidor-de-pared")
+
+ARCHIVO_PARAMS = "pid_params.json"
+
+def cargar_params():
+    """Carga Kp y Kd desde archivo, o retorna valores por defecto."""
+    if os.path.exists(ARCHIVO_PARAMS):
+        try:
+            with open(ARCHIVO_PARAMS, 'r') as f:
+                data = json.load(f)
+                kp = data.get('Kp', 2.5)
+                kd = data.get('Kd', 12.0)
+                logger.info(f"Cargados parámetros: Kp={kp:.2f} Kd={kd:.2f}")
+                return [kp, kd]
+        except Exception as e:
+            logger.warning(f"Error cargando parámetros: {e}")
+    return [2.5, 12.0]
+
+def guardar_params(kp, kd):
+    """Guarda Kp y Kd en archivo."""
+    try:
+        data = {'Kp': kp, 'Kd': kd}
+        with open(ARCHIVO_PARAMS, 'w') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Parámetros guardados: Kp={kp:.2f} Kd={kd:.2f}")
+    except Exception as e:
+        logger.warning(f"Error guardando parámetros: {e}")
 
 # === UTILIDADES ===
 def clip(valor, min_v, max_v):
@@ -31,8 +59,8 @@ def enviar_motores(vI, vD):
 # === CLASE DE AUTO-CALIBRACIÓN (TWIDDLE) ===
 class AutoTuner:
     def __init__(self):
-        self.p = [2.5, 12.0]  # [Kp, Kd] iniciales
-        self.dp = [0.2, 1.0]  # Saltos de búsqueda
+        self.p = cargar_params()
+        self.dp = [0.2, 1.0]
         self.mejor_error = float('inf')
         self.error_acumulado = 0
         self.muestras = 0
@@ -66,6 +94,7 @@ class AutoTuner:
             self.p[self.indice] += self.dp[self.indice]
             self.paso_twiddle = 0
 
+        guardar_params(self.p[0], self.p[1])
         self.error_acumulado = 0
         self.muestras = 0
 
