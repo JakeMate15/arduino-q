@@ -8,58 +8,12 @@ const pwmRightEl = document.getElementById('pwm-right');
 const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
-const btnLeft = document.getElementById('btn-turn-left');
-const btnRight = document.getElementById('btn-turn-right');
 
-// Inicializar Socket.IO siguiendo el estándar de los ejemplos para Debian
-const socket = io(window.location.origin, {
-    path: '/socket.io',
-    transports: ['polling', 'websocket']
-});
+// Inicializar Socket.IO
+const socket = io(`http://${window.location.host}`);
 
 let joystickData = { x: 0, y: 0 };
 let lastSentTime = 0;
-let turnInterval = null;
-
-// Eventos de botones de giro
-function bindTurnButton(btn, dir) {
-    const startAction = () => {
-        if (turnInterval) return; // Ya está girando
-
-        // Enviar inmediatamente
-        socket.emit('girar', { dir: dir, action: 'start' });
-
-        // Repetir cada 100ms para que el watchdog del Arduino no se active
-        turnInterval = setInterval(() => {
-            socket.emit('girar', { dir: dir, action: 'start' });
-        }, 100);
-    };
-
-    const stopAction = () => {
-        if (turnInterval) {
-            clearInterval(turnInterval);
-            turnInterval = null;
-        }
-        socket.emit('girar', { dir: dir, action: 'stop' });
-    };
-
-    btn.addEventListener('mousedown', startAction);
-    btn.addEventListener('mouseup', stopAction);
-    btn.addEventListener('mouseleave', stopAction);
-
-    // Soporte táctil
-    btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startAction();
-    });
-    btn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        stopAction();
-    });
-}
-
-bindTurnButton(btnLeft, 'izq');
-bindTurnButton(btnRight, 'der');
 
 // Inicializar Joystick (nipplejs)
 const joystickZone = document.getElementById('joystick-zone');
@@ -68,14 +22,15 @@ const joystick = nipplejs.create({
     mode: 'static',
     position: { left: '50%', top: '50%' },
     color: '#00878F',
-    size: 150,
-    lockY: true // Bloquear eje X en el frontend para mayor claridad
+    size: 150
 });
 
 // Eventos del Joystick
 joystick.on('move', (evt, data) => {
     if (data.distance) {
-        const force = Math.min(data.distance / 75, 1);
+        // Normalizar a rango -255 a 255
+        // data.vector.x e y están en rango -1 a 1
+        const force = Math.min(data.distance / 75, 1); // 75 es el radio (size/2)
         const angle = data.angle.radian;
 
         const x = Math.round(Math.cos(angle) * force * 255);
@@ -83,6 +38,7 @@ joystick.on('move', (evt, data) => {
 
         joystickData = { x, y };
 
+        // Throttling: Enviar solo si ha pasado el intervalo
         const now = Date.now();
         if (now - lastSentTime > SEND_INTERVAL) {
             sendJoystickData();
@@ -99,6 +55,32 @@ joystick.on('end', () => {
 function sendJoystickData() {
     socket.emit('joystick', joystickData);
 }
+
+// Botones de Giro
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+
+function handleTurnStart(dir) {
+    socket.emit('girar', { dir: dir, action: 'start' });
+}
+
+function handleTurnStop() {
+    socket.emit('girar', { action: 'stop' });
+}
+
+// Eventos para Botón Izquierdo
+btnLeft.addEventListener('mousedown', () => handleTurnStart('izq'));
+btnLeft.addEventListener('mouseup', handleTurnStop);
+btnLeft.addEventListener('mouseleave', handleTurnStop);
+btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); handleTurnStart('izq'); });
+btnLeft.addEventListener('touchend', handleTurnStop);
+
+// Eventos para Botón Derecho
+btnRight.addEventListener('mousedown', () => handleTurnStart('der'));
+btnRight.addEventListener('mouseup', handleTurnStop);
+btnRight.addEventListener('mouseleave', handleTurnStop);
+btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); handleTurnStart('der'); });
+btnRight.addEventListener('touchend', handleTurnStop);
 
 // Comunicación Socket.IO
 socket.on('connect', () => {
@@ -117,6 +99,7 @@ socket.on('disconnect', () => {
 socket.on('sensores', (data) => {
     if (data.frontal !== undefined) {
         distFrontalEl.textContent = `${data.frontal} cm`;
+        // Cambio de color si está muy cerca
         distFrontalEl.style.color = (data.frontal > 0 && data.frontal < 15) ? '#e74c3c' : '#00878F';
     }
     if (data.derecho !== undefined) {
@@ -132,3 +115,4 @@ socket.on('motores', (data) => {
 socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
+

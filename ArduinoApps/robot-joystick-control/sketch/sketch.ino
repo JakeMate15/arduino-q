@@ -11,7 +11,7 @@ const uint32_t off[] = { 0, 0, 0 };
 #define DIR_B 4 
 #define PWM_B 6
 const bool MOTOR_B_INVERTIDO = true;
-const int MAX_PWM_LIMIT = 150; // Límite de velocidad aumentado a 150
+const int MAX_PWM_LIMIT = 150; // Límite de velocidad solicitado
 
 // === ULTRASÓNICOS ===
 #define TRIG_DER 10
@@ -43,31 +43,21 @@ void controlar_motores(int vI, int vD) {
 
 // Recibe valores X e Y del joystick (-255 a 255)
 void recibir_joystick(int x, int y) {
-  // Solo permitimos movimiento hacia adelante o atrás (Eje Y)
-  // El Eje X se ignora para el movimiento principal
-  int scaledY = map(y, -255, 255, -MAX_PWM_LIMIT, MAX_PWM_LIMIT);
+  // Escalar los valores del joystick (-255 a 255) al rango del robot (-MAX_PWM_LIMIT a MAX_PWM_LIMIT)
+  // Usamos la mitad del límite para cada eje para que la suma (y+x) no exceda el límite total
+  int scaledX = map(x, -255, 255, -(MAX_PWM_LIMIT/2), (MAX_PWM_LIMIT/2));
+  int scaledY = map(y, -255, 255, -(MAX_PWM_LIMIT/2), (MAX_PWM_LIMIT/2));
+
+  // Motor Mixing para dirección diferencial
+  int vI = scaledY + scaledX;
+  int vD = scaledY - scaledX;
   
-  // Aplicamos la misma velocidad a ambos motores para ir recto
-  controlar_motores(scaledY, scaledY);
+  // Limitar por seguridad final
+  vI = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI));
+  vD = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD));
+  
+  controlar_motores(vI, vD);
   ultimoComandoTime = millis(); // Reset watchdog
-}
-
-// Funciones para giro mediante botones (llamadas desde Python/Web)
-void girar_izquierda() {
-  // Motor Izquierdo atrás, Motor Derecho adelante para rotar sobre su eje
-  controlar_motores(-MAX_PWM_LIMIT, MAX_PWM_LIMIT);
-  ultimoComandoTime = millis();
-}
-
-void girar_derecha() {
-  // Motor Izquierdo adelante, Motor Derecho atrás para rotar sobre su eje
-  controlar_motores(MAX_PWM_LIMIT, -MAX_PWM_LIMIT);
-  ultimoComandoTime = millis();
-}
-
-void detener_giro() {
-  controlar_motores(0, 0);
-  ultimoComandoTime = millis();
 }
 
 unsigned long pulseInManual(uint8_t pin, uint8_t state, unsigned long timeout) {
@@ -115,6 +105,24 @@ void setup() {
   Bridge.provide("girar_der", girar_derecha);
   Bridge.provide("detener", detener_giro);
   
+  ultimoComandoTime = millis();
+}
+
+// Funciones para giro mediante botones (llamadas desde Python/Web)
+void girar_izquierda() {
+  // Motor Izquierdo atrás, Motor Derecho adelante para rotar sobre su eje
+  controlar_motores(-MAX_PWM_LIMIT, MAX_PWM_LIMIT);
+  ultimoComandoTime = millis();
+}
+
+void girar_derecha() {
+  // Motor Izquierdo adelante, Motor Derecho atrás para rotar sobre su eje
+  controlar_motores(MAX_PWM_LIMIT, -MAX_PWM_LIMIT);
+  ultimoComandoTime = millis();
+}
+
+void detener_giro() {
+  controlar_motores(0, 0);
   ultimoComandoTime = millis();
 }
 

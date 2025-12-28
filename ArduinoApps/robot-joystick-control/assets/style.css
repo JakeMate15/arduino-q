@@ -112,47 +112,47 @@ main {
 
 .joystick-section {
     background-color: #eee;
-    height: 300px;
+    height: 320px;
     border-radius: 10px;
     position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 10px;
-}
-
-.turn-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    gap: 10px;
-}
-
-.turn-btn {
-    background-color: var(--arduino-teal);
-    color: white;
-    border: none;
-    padding: 20px 15px;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    flex: 0 0 80px;
-    height: 100px;
-    transition: background-color 0.2s;
-}
-
-.turn-btn:active {
-    background-color: var(--arduino-blue);
+    padding-bottom: 20px;
 }
 
 #joystick-zone {
-    flex: 1;
-    height: 200px;
-    min-width: 150px;
+    width: 100%;
+    height: 220px;
     position: relative;
+}
+
+.turn-buttons {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    z-index: 10;
+}
+
+.btn-turn {
+    padding: 15px 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background-color: var(--arduino-teal);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-turn:active {
+    background-color: var(--arduino-blue);
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .hint {

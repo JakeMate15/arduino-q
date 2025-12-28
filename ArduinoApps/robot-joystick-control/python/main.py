@@ -19,30 +19,50 @@ def al_recibir_distancias(d_frontal, d_derecho):
 # Manejador de mensajes del WebSocket (Joystick)
 def on_joystick_move(sid, data):
     """Recibe movimiento del joystick desde el frontend y lo envía al Arduino."""
+    x = data.get("x", 0)
     y = data.get("y", 0)
     
     # Límite de PWM configurado en Arduino
     MAX_PWM_LIMIT = 150
     
-    # Escalar solo el eje Y (-255 a 255) al rango limitado (-150 a 150)
-    v_base = int((y / 255.0) * MAX_PWM_LIMIT)
+    # Escalar los valores del joystick (-255 a 255) al rango limitado (-MAX_PWM_LIMIT/2 a MAX_PWM_LIMIT/2)
+    # para que al sumarlos (vI = y + x) no excedan el MAX_PWM_LIMIT de 120.
+    def scale(val):
+        return int((val / 255.0) * (MAX_PWM_LIMIT / 2.0))
+
+    scaledX = scale(x)
+    scaledY = scale(y)
+    
+    # Calcular PWM para mostrar en el frontend (reflejando lo que hace el Arduino)
+    vI = scaledY + scaledX
+    vD = scaledY - scaledX
+    
+    # Limitar por seguridad en el reporte
+    vI = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
+    vD = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
     
     try:
-        # Enviar al Arduino via Bridge (enviamos el original y el Arduino lo escala)
-        # Enviamos x=0 porque ahora el giro es por botones
-        Bridge.call("joystick", 0, y)
+        # Enviar al Arduino via Bridge (enviamos los originales y el Arduino los escala)
+        Bridge.call("joystick", x, y)
         
-        # Notificar al frontend los PWMs
+        # Opcional: Notificar al frontend los PWMs calculados con el nuevo límite
         web_ui.send_message("motores", {
-            "izquierdo": v_base,
-            "derecho": v_base
+            "izquierdo": vI,
+            "derecho": vD
         })
     except Exception as e:
         logger.warning(f"Error llamando a Bridge.joystick: {e}")
 
+# Registrar callbacks
+Bridge.provide("distancias", al_recibir_distancias)
+web_ui.on_message("joystick", on_joystick_move)
+
 def on_girar(sid, data):
     direccion = data.get("dir")
     accion = data.get("action") # "start" o "stop"
+    
+    # Límite de PWM configurado en Arduino
+    MAX_PWM_LIMIT = 150
     
     try:
         if accion == "stop":
@@ -50,16 +70,13 @@ def on_girar(sid, data):
             web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
         elif direccion == "izq":
             Bridge.call("girar_izq")
-            web_ui.send_message("motores", {"izquierdo": -150, "derecho": 150})
+            web_ui.send_message("motores", {"izquierdo": -MAX_PWM_LIMIT, "derecho": MAX_PWM_LIMIT})
         elif direccion == "der":
             Bridge.call("girar_der")
-            web_ui.send_message("motores", {"izquierdo": 150, "derecho": -150})
+            web_ui.send_message("motores", {"izquierdo": MAX_PWM_LIMIT, "derecho": -MAX_PWM_LIMIT})
     except Exception as e:
         logger.warning(f"Error en comando de giro: {e}")
 
-# Registrar callbacks
-Bridge.provide("distancias", al_recibir_distancias)
-web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
 
 # Manejar conexión de clientes
