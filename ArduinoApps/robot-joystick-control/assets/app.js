@@ -11,18 +11,35 @@ const errorContainer = document.getElementById('error-container');
 const btnLeft = document.getElementById('btn-turn-left');
 const btnRight = document.getElementById('btn-turn-right');
 
-// Inicializar Socket.IO
-const socket = io(`http://${window.location.host}`);
+// Inicializar Socket.IO siguiendo el estándar de los ejemplos para Debian
+const socket = io(window.location.origin, {
+    path: '/socket.io',
+    transports: ['polling', 'websocket']
+});
 
 let joystickData = { x: 0, y: 0 };
 let lastSentTime = 0;
+let turnInterval = null;
 
 // Eventos de botones de giro
 function bindTurnButton(btn, dir) {
     const startAction = () => {
+        if (turnInterval) return; // Ya está girando
+
+        // Enviar inmediatamente
         socket.emit('girar', { dir: dir, action: 'start' });
+
+        // Repetir cada 100ms para que el watchdog del Arduino no se active
+        turnInterval = setInterval(() => {
+            socket.emit('girar', { dir: dir, action: 'start' });
+        }, 100);
     };
+
     const stopAction = () => {
+        if (turnInterval) {
+            clearInterval(turnInterval);
+            turnInterval = null;
+        }
         socket.emit('girar', { dir: dir, action: 'stop' });
     };
 
@@ -58,9 +75,7 @@ const joystick = nipplejs.create({
 // Eventos del Joystick
 joystick.on('move', (evt, data) => {
     if (data.distance) {
-        // Normalizar a rango -255 a 255
-        // data.vector.x e y están en rango -1 a 1
-        const force = Math.min(data.distance / 75, 1); // 75 es el radio (size/2)
+        const force = Math.min(data.distance / 75, 1);
         const angle = data.angle.radian;
 
         const x = Math.round(Math.cos(angle) * force * 255);
@@ -68,7 +83,6 @@ joystick.on('move', (evt, data) => {
 
         joystickData = { x, y };
 
-        // Throttling: Enviar solo si ha pasado el intervalo
         const now = Date.now();
         if (now - lastSentTime > SEND_INTERVAL) {
             sendJoystickData();
@@ -103,7 +117,6 @@ socket.on('disconnect', () => {
 socket.on('sensores', (data) => {
     if (data.frontal !== undefined) {
         distFrontalEl.textContent = `${data.frontal} cm`;
-        // Cambio de color si está muy cerca
         distFrontalEl.style.color = (data.frontal > 0 && data.frontal < 15) ? '#e74c3c' : '#00878F';
     }
     if (data.derecho !== undefined) {
