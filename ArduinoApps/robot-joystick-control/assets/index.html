@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control - Joystick</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Control de Robot</h1>
+            <div id="connection-status" class="status-disconnected">Desconectado</div>
+        </header>
+
+        <main>
+            <div class="telemetry-section">
+                <div class="card motors-card">
+                    <h2>Motores (PWM)</h2>
+                    <div class="motor-displays">
+                        <div class="motor-item">
+                            <span class="label">Izquierdo</span>
+                            <div id="pwm-left" class="value">0</div>
+                        </div>
+                        <div class="motor-item">
+                            <span class="label">Derecho</span>
+                            <div id="pwm-right" class="value">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card sensors-card">
+                    <h2>Sensores (Distancia)</h2>
+                    <div class="sensor-displays">
+                        <div class="sensor-item">
+                            <span class="label">Frontal</span>
+                            <div id="dist-frontal" class="value">-- cm</div>
+                        </div>
+                        <div class="sensor-item">
+                            <span class="label">Derecho</span>
+                            <div id="dist-derecho" class="value">-- cm</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="joystick-section">
+                <div id="joystick-zone"></div>
+                <p class="hint">Arrastra para mover el robot</p>
+            </div>
+        </main>
+
+        <div id="error-container" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script src="libs/socket.io.min.js"></script>
+    <script src="libs/nipplejs.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+

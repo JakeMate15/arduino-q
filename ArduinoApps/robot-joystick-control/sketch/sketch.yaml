@@ -1,0 +1,15 @@
+# sketch.yaml: Properties for the Arduino sketch
+# This file describes the required board, libraries and other properties.
+
+# Minimum board requirements for this sketch.
+# Each entry is a list of boards that are compatible with each other.
+board:
+  - arduino:uno_r4_wifi:uno_r4_wifi
+  - arduino:renesas_uno:minima
+
+# A list of libraries that this sketch depends on.
+# These will be automatically installed when the sketch is uploaded.
+libraries:
+  - Arduino_LED_Matrix
+  - Arduino_RouterBridge
+

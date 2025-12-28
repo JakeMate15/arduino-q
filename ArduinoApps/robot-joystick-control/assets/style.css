@@ -1,0 +1,151 @@
+:root {
+    --arduino-teal: #00878F;
+    --arduino-blue: #006468;
+    --arduino-light: #E6F2F2;
+    --bg-color: #f4f7f6;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --error-red: #e74c3c;
+    --success-green: #2ecc71;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.app-container {
+    width: 95%;
+    max-width: 500px;
+    background-color: var(--card-bg);
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: var(--arduino-teal);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#connection-status {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.status-connected {
+    background-color: var(--success-green);
+}
+
+.status-disconnected {
+    background-color: var(--error-red);
+}
+
+main {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.telemetry-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.card {
+    background-color: var(--arduino-light);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 135, 143, 0.1);
+}
+
+.card h2 {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: var(--arduino-blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.motor-displays, .sensor-displays {
+    display: flex;
+    justify-content: space-around;
+}
+
+.motor-item, .sensor-item {
+    text-align: center;
+}
+
+.label {
+    display: block;
+    font-size: 0.7rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--arduino-teal);
+}
+
+.joystick-section {
+    background-color: #eee;
+    height: 250px;
+    border-radius: 10px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#joystick-zone {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.hint {
+    position: absolute;
+    bottom: 10px;
+    font-size: 0.8rem;
+    color: #999;
+    margin: 0;
+}
+
+.error-message {
+    background-color: var(--error-red);
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 400px) {
+    .telemetry-section {
+        grid-template-columns: 1fr;
+    }
+}
+
