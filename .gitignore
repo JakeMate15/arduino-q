@@ -1,17 +1,29 @@
+.tool-versions
+
 **/.cache/
 **/.venv/
 **/__pycache__/
 **/.task/
 **/node_modules/
+**/.DS_Store
+.task/
+Taskfile.yml
 
 *.o
 *.bin
 *.elf
 *.hex
 *.db
+*.pem
+*.png
+*.svg
 
 /.*
 
 !.gitignore
 !/ArduinoApps/
 !/examples/
+
+# IDEs
+.vscode/*
+.idea/*
