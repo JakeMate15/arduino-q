@@ -11,13 +11,12 @@ MAX_PWM = 200         # Límite de seguridad
 logger = Logger("seguidor-de-pared")
 
 def enviar_motores(vI, vD):
-    """Envía comandos a los motores en un thread separado para evitar bloqueo."""
+    logger.info(f"Motores: vI={vI} vD={vD}")
     def _call():
         try:
             Bridge.call("motores", vI, vD)
         except Exception as e:
-            logger.warning(f"Error enviando comando a motores: {e}")
-    
+            logger.warning(f"Error motores: {e}")
     threading.Thread(target=_call, daemon=True).start()
 
 class AutoTuner:

@@ -53,6 +53,7 @@ float distanciaCM(int trig, int echo) {
 }
 
 void controlar_motores(int vI, int vD) {
+  Serial.print("[motores] vI="); Serial.print(vI); Serial.print(" vD="); Serial.println(vD);
   int dirA = (vI >= 0) ? 1 : 0;
   int dirB = (vD >= 0) ? 1 : 0;
   avanza(abs(vI), abs(vD), dirA, dirB);
@@ -60,8 +61,6 @@ void controlar_motores(int vI, int vD) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("[sketch] Starting setup...");
-  
   matrix.begin();
   
   pinMode(DIR_A, OUTPUT);
@@ -75,28 +74,13 @@ void setup() {
   pinMode(ECHO_DER, INPUT);
 
   matrix.loadFrame(heart);
-  
-  Serial.println("[sketch] Initializing Bridge...");
   Bridge.begin();
   Bridge.provide("motores", controlar_motores);
-  Serial.println("[sketch] Bridge ready. Setup complete!");
 }
-
-unsigned long lastPrint = 0;
 
 void loop() {
   float dC = distanciaCM(TRIG_CENTRO, ECHO_CENTRO);
   float dR = distanciaCM(TRIG_DER, ECHO_DER);
-  
-  // Debug: imprimir cada segundo
-  if (millis() - lastPrint > 1000) {
-    Serial.print("[sketch] Sending: centro=");
-    Serial.print(dC);
-    Serial.print(" der=");
-    Serial.println(dR);
-    lastPrint = millis();
-  }
-  
   Bridge.notify("distancias", -1.0f, dC, dR);
   delay(20); 
 }
