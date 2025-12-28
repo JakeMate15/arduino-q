@@ -1,33 +1,17 @@
-# 1. Ignorar todo por defecto
-*
-
-# 2. Excepciones: Permitir el archivo .gitignore y las carpetas de trabajo
-!.gitignore
-!ArduinoApps/
-!ArduinoApps/**
-!examples/
-!examples/**
-
-# 3. Reglas específicas para limpiar basura (incluso dentro de las excepciones anteriores)
-# Usamos el prefijo **/ para que busque en cualquier nivel de carpeta
-
-# Python y herramientas
+**/.cache/
 **/.venv/
 **/__pycache__/
-.tool-versions
-
-# Taskfile y temporales
 **/.task/
-Taskfile.yml
+**/node_modules/
 
-# Archivos de caché y datos de ejemplos
-**/.cache/
-**/*.db
-**/*.pem
+*.o
+*.bin
+*.elf
+*.hex
+*.db
 
-# Archivos de compilación (Arduino/C++)
-**/*.o
-**/*.d
-**/*.bin
-**/*.elf
-**/*.hex
+/.*
+
+!.gitignore
+!/ArduinoApps/
+!/examples/
