@@ -1,9 +1,32 @@
-/*
+# Ignorar todo por defecto
+*
 
-!/ArduinoApps/
-!/examples/
-
-!/ArduinoApps/**
-!/examples/**
-
+# Permitir el archivo .gitignore
 !.gitignore
+
+# Permitir las carpetas y TODO su contenido
+!ArduinoApps/
+!ArduinoApps/**
+!examples/
+!examples/**
+
+# ASDF
+.tool-versions
+
+# Python
+.venv
+
+# Taskfile
+.task/
+Taskfile.yml
+
+# Examples
+*.db
+*.pem
+.cache/
+__pycache__/
+**/.DS_Store
+
+# IDEs
+.vscode/*
+.idea/*
