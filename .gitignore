@@ -3,4 +3,7 @@
 !/ArduinoApps/
 !/examples/
 
+!/ArduinoApps/**
+!/examples/**
+
 !.gitignore
