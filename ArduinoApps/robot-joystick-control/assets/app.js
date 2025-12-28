@@ -14,7 +14,19 @@ const recToggle = document.getElementById('rec-toggle');
 const socket = io(`http://${window.location.host}`);
 
 let joystickData = { x: 0, y: 0 };
-let lastSentTime = 0;
+let currentTurnDir = null; // 'izq', 'der' o null
+
+// Intervalo principal de envío (Heartbeat) para evitar que el watchdog del Arduino se active
+setInterval(() => {
+    // Si hay giro por botón, priorizamos eso o lo enviamos como comando repetido
+    if (currentTurnDir) {
+        socket.emit('girar', { dir: currentTurnDir, action: 'start' });
+    }
+    // Si hay movimiento de joystick (y no estamos girando por botón), enviamos heartbeat del joystick
+    else if (joystickData.x !== 0 || joystickData.y !== 0) {
+        sendJoystickData();
+    }
+}, 100);
 
 // Lógica de Grabación
 recToggle.addEventListener('change', (e) => {
@@ -40,8 +52,7 @@ const joystick = nipplejs.create({
 joystick.on('move', (evt, data) => {
     if (data.distance) {
         // Normalizar a rango -255 a 255
-        // data.vector.x e y están en rango -1 a 1
-        const force = Math.min(data.distance / 75, 1); // 75 es el radio (size/2)
+        const force = Math.min(data.distance / 75, 1);
         const angle = data.angle.radian;
 
         const x = Math.round(Math.cos(angle) * force * 255);
@@ -49,12 +60,9 @@ joystick.on('move', (evt, data) => {
 
         joystickData = { x, y };
 
-        // Throttling: Enviar solo si ha pasado el intervalo
-        const now = Date.now();
-        if (now - lastSentTime > SEND_INTERVAL) {
-            sendJoystickData();
-            lastSentTime = now;
-        }
+        // Enviamos inmediatamente para mayor responsividad, 
+        // el intervalo se encarga de mantenerlo vivo si se queda quieto
+        sendJoystickData();
     }
 });
 
@@ -72,10 +80,12 @@ const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 
 function handleTurnStart(dir) {
+    currentTurnDir = dir;
     socket.emit('girar', { dir: dir, action: 'start' });
 }
 
 function handleTurnStop() {
+    currentTurnDir = null;
     socket.emit('girar', { action: 'stop' });
 }
 
