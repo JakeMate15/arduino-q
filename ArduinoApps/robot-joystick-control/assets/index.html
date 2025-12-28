@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Control - Joystick</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -45,8 +47,12 @@
             </div>
 
             <div class="joystick-section">
-                <div id="joystick-zone"></div>
-                <p class="hint">Arrastra para mover el robot</p>
+                <div class="turn-controls">
+                    <button id="btn-turn-left" class="turn-btn">⟲ Izq</button>
+                    <div id="joystick-zone"></div>
+                    <button id="btn-turn-right" class="turn-btn">Der ⟳</button>
+                </div>
+                <p class="hint">Joystick: Adelante/Atrás | Botones: Girar</p>
             </div>
         </main>
 
@@ -57,5 +63,5 @@
     <script src="libs/nipplejs.min.js"></script>
     <script src="app.js"></script>
 </body>
-</html>
 
+</html>

@@ -112,18 +112,46 @@ main {
 
 .joystick-section {
     background-color: #eee;
-    height: 250px;
+    height: 300px;
     border-radius: 10px;
     position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    padding: 10px;
+}
+
+.turn-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 10px;
+}
+
+.turn-btn {
+    background-color: var(--arduino-teal);
+    color: white;
+    border: none;
+    padding: 20px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    flex: 0 0 80px;
+    height: 100px;
+    transition: background-color 0.2s;
+}
+
+.turn-btn:active {
+    background-color: var(--arduino-blue);
 }
 
 #joystick-zone {
-    width: 100%;
-    height: 100%;
+    flex: 1;
+    height: 200px;
+    min-width: 150px;
     position: relative;
 }
 

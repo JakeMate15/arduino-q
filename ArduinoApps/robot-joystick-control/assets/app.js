@@ -8,12 +8,37 @@ const pwmRightEl = document.getElementById('pwm-right');
 const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
+const btnLeft = document.getElementById('btn-turn-left');
+const btnRight = document.getElementById('btn-turn-right');
 
-// Inicializar Socket.IO
-const socket = io(`http://${window.location.host}`);
+// ... (Socket.IO init)
 
-let joystickData = { x: 0, y: 0 };
-let lastSentTime = 0;
+// Eventos de botones de giro
+function bindTurnButton(btn, dir) {
+    const startAction = () => {
+        socket.emit('girar', { dir: dir, action: 'start' });
+    };
+    const stopAction = () => {
+        socket.emit('girar', { dir: dir, action: 'stop' });
+    };
+
+    btn.addEventListener('mousedown', startAction);
+    btn.addEventListener('mouseup', stopAction);
+    btn.addEventListener('mouseleave', stopAction);
+
+    // Soporte táctil
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startAction();
+    });
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stopAction();
+    });
+}
+
+bindTurnButton(btnLeft, 'izq');
+bindTurnButton(btnRight, 'der');
 
 // Inicializar Joystick (nipplejs)
 const joystickZone = document.getElementById('joystick-zone');
@@ -22,7 +47,8 @@ const joystick = nipplejs.create({
     mode: 'static',
     position: { left: '50%', top: '50%' },
     color: '#00878F',
-    size: 150
+    size: 150,
+    lockY: true // Bloquear eje X en el frontend para mayor claridad
 });
 
 // Eventos del Joystick
@@ -32,12 +58,12 @@ joystick.on('move', (evt, data) => {
         // data.vector.x e y están en rango -1 a 1
         const force = Math.min(data.distance / 75, 1); // 75 es el radio (size/2)
         const angle = data.angle.radian;
-        
+
         const x = Math.round(Math.cos(angle) * force * 255);
         const y = Math.round(Math.sin(angle) * force * 255);
-        
+
         joystickData = { x, y };
-        
+
         // Throttling: Enviar solo si ha pasado el intervalo
         const now = Date.now();
         if (now - lastSentTime > SEND_INTERVAL) {
