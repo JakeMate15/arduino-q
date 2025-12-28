@@ -57,6 +57,14 @@ float distanciaCM(int trig, int echo) {
   return (dur * VEL_SONIDO) * 0.5f;
 }
 
+// Función para controlar motores desde Python
+void controlar_motores(int vI, int vD) {
+  // Determinamos dirección basado en signo del PWM
+  int dirA = (vI >= 0) ? 1 : 0;
+  int dirB = (vD >= 0) ? 1 : 0;
+  avanza(abs(vI), abs(vD), dirA, dirB);
+}
+
 void setup() {
   Serial.begin(115200);
   matrix.begin();
@@ -84,6 +92,8 @@ void setup() {
   digitalWrite(TRIG_DER, LOW);
 
   Bridge.begin();
+  // Registrar función para recibir comandos de Python
+  Bridge.provide("motores", controlar_motores);
   delay(1000);
 }
 
@@ -91,19 +101,8 @@ void loop() {
   float dC = distanciaCM(TRIG_CENTRO, ECHO_CENTRO);
   float dR = distanciaCM(TRIG_DER, ECHO_DER);
 
-  // 1. Informar a Python
+  // Informar a Python las distancias medidas
   Bridge.notify("distancias", -1.0f, dC, dR);
 
-  // 2. Ejecutar comandos de Python
-  if (Bridge.available()) {
-    if (Bridge.commandName() == "motores") {
-      int vI = Bridge.readInt("vI");
-      int vD = Bridge.readInt("vD");
-      // Determinamos dirección basado en signo del PWM
-      int dirA = (vI >= 0) ? 1 : 0;
-      int dirB = (vD >= 0) ? 1 : 0;
-      avanza(abs(vI), abs(vD), dirA, dirB);
-    }
-  }
   delay(20); // Ciclo rápido de 50Hz
 }

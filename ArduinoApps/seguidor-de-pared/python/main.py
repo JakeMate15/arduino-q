@@ -56,12 +56,12 @@ def al_recibir_distancias(izq, centro, der):
     # --- MÁQUINA DE ESTADOS ---
     # 1. EMERGENCIA: Pared al frente
     if 0 < centro < 15:
-        Bridge.command("motores", vI=-100, vD=100)
+        Bridge.call("motores", -100, 100)
         return
 
     # 2. BÚSQUEDA: Pared derecha se perdió
     if der > 50 or der < 0:
-        Bridge.command("motores", vI=130, vD=70) # Giro suave a la derecha
+        Bridge.call("motores", 130, 70) # Giro suave a la derecha
         return
 
     # 3. SEGUIMIENTO (PID + TWIDDLE)
@@ -74,7 +74,7 @@ def al_recibir_distancias(izq, centro, der):
     # Enviar a motores
     vI = int(VEL_CRUCERO + ajuste)
     vD = int(VEL_CRUCERO - ajuste)
-    Bridge.command("motores", vI=vI, vD=vD)
+    Bridge.call("motores", vI, vD)
 
     # Acumular para Twiddle
     tuner.error_acumulado += abs(error)
