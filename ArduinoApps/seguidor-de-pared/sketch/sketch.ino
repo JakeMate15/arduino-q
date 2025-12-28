@@ -87,22 +87,23 @@ void setup() {
   delay(1000);
 }
 
-void loop() {  
+void loop() {
   float dC = distanciaCM(TRIG_CENTRO, ECHO_CENTRO);
   float dR = distanciaCM(TRIG_DER, ECHO_DER);
 
-  if (dC > 0 && dC < 15.0f) {
-    avanza(0, 0, 0, 0); 
-    matrix.loadFrame(danger); 
-  } else {
-    avanza(100, 100, 1, 1); // Velocidad reducida
-    matrix.loadFrame(heart);
-  }
-
+  // 1. Informar a Python
   Bridge.notify("distancias", -1.0f, dC, dR);
-  
-  // Parpadeo rápido
-  delay(50);
-  matrix.clear();
-  delay(50);
+
+  // 2. Ejecutar comandos de Python
+  if (Bridge.available()) {
+    if (Bridge.commandName() == "motores") {
+      int vI = Bridge.readInt("vI");
+      int vD = Bridge.readInt("vD");
+      // Determinamos dirección basado en signo del PWM
+      int dirA = (vI >= 0) ? 1 : 0;
+      int dirB = (vD >= 0) ? 1 : 0;
+      avanza(abs(vI), abs(vD), dirA, dirB);
+    }
+  }
+  delay(20); // Ciclo rápido de 50Hz
 }
