@@ -1,4 +1,5 @@
 import time
+import threading
 from arduino.app_utils import App, Bridge, Logger
 
 # === CONFIGURACIÓN ===
@@ -8,6 +9,16 @@ CICLO_TEST = 150
 MAX_PWM = 200         # Límite de seguridad
 
 logger = Logger("seguidor-de-pared")
+
+def enviar_motores(vI, vD):
+    """Envía comandos a los motores en un thread separado para evitar bloqueo."""
+    def _call():
+        try:
+            Bridge.call("motores", vI, vD)
+        except Exception as e:
+            logger.warning(f"Error enviando comando a motores: {e}")
+    
+    threading.Thread(target=_call, daemon=True).start()
 
 class AutoTuner:
     def __init__(self):
@@ -71,13 +82,13 @@ def al_recibir_distancias(izq, centro, der):
     
     # 1. EMERGENCIA: Demasiado cerca de frente
     if 0 < centro < 15:
-        Bridge.call("motores", -80, 80) # Giro sobre su eje
-        error_previo = 0 # Reset para evitar pico derivativo al salir del estado
+        enviar_motores(-80, 80)  # Giro sobre su eje
+        error_previo = 0  # Reset para evitar pico derivativo al salir del estado
         return
 
     # 2. BÚSQUEDA: Si la pared derecha está muy lejos o no se ve (-1)
     if der > 45 or der <= 0:
-        Bridge.call("motores", 120, 60) # Curva suave a la derecha para buscar
+        enviar_motores(120, 60)  # Curva suave a la derecha para buscar
         error_previo = 0
         return
 
@@ -97,7 +108,7 @@ def al_recibir_distancias(izq, centro, der):
     vD = int(VEL_CRUCERO - ajuste)
     
     # Aplicar límites y enviar
-    Bridge.call("motores", clip(vI, -MAX_PWM, MAX_PWM), clip(vD, -MAX_PWM, MAX_PWM))
+    enviar_motores(clip(vI, -MAX_PWM, MAX_PWM), clip(vD, -MAX_PWM, MAX_PWM))
 
     # --- APRENDIZAJE ---
     # Solo aprendemos si estamos en una situación de control normal
