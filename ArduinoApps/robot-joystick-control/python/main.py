@@ -8,7 +8,9 @@ logger = Logger("robot-joystick-control")
 web_ui = WebUI()
 
 # --- Configuración de Grabación ---
-ARCHIVO_DATOS = "recorrido_robot.csv"
+# El archivo se guarda en el directorio de la aplicación Python
+DIR_DATOS = os.path.dirname(os.path.abspath(__file__))
+ARCHIVO_DATOS = os.path.join(DIR_DATOS, "recorrido_robot.csv")
 grabando = False
 ultimo_pwm_izq = 0
 ultimo_pwm_der = 0
@@ -19,8 +21,11 @@ if not os.path.exists(ARCHIVO_DATOS):
         with open(ARCHIVO_DATOS, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['timestamp', 'dist_frontal', 'dist_derecho', 'pwm_izq', 'pwm_der'])
+        logger.info(f"Archivo de datos creado: {ARCHIVO_DATOS}")
     except Exception as e:
         logger.warning(f"No se pudo crear el archivo CSV: {e}")
+else:
+    logger.info(f"Archivo de datos existente encontrado: {ARCHIVO_DATOS}")
 
 # Callback para recibir distancias desde el Arduino
 def al_recibir_distancias(d_frontal, d_derecho):
@@ -119,7 +124,7 @@ def on_toggle_recording(sid, data):
     global grabando
     grabando = data.get("active", False)
     estado = "INICIADA" if grabando else "DETENIDA"
-    logger.info(f"Grabación de datos: {estado}")
+    logger.info(f"Grabación de datos: {estado} -> Archivo: {ARCHIVO_DATOS}")
     web_ui.send_message("status", {"message": f"Grabación {estado}"})
 
 # Registrar callbacks
