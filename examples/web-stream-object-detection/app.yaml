@@ -1,6 +1,0 @@
-name: Object Detection Local Camera
-description: Object detection using a local USB camera with integrated stream.
-icon: 📷
-bricks:
-  - arduino:video_object_detection
-  - arduino:web_ui
