@@ -60,9 +60,12 @@ void setup() {
   matrix.loadFrame(heart);
   
   pinMode(DIR_A, OUTPUT);
-  pinMode(PWM_A, OUTPUT);
   pinMode(DIR_B, OUTPUT);
-  pinMode(PWM_B, OUTPUT);
+  
+  // Test motores al iniciar
+  avanza(100, 100, 1, 1);
+  delay(500);
+  avanza(0, 0, 0, 0);
   
   pinMode(TRIG_CENTRO, OUTPUT);
   pinMode(ECHO_CENTRO, INPUT);
