@@ -128,4 +128,20 @@ logger.info("Registering 'distancias' callback")
 Bridge.provide("distancias", al_recibir_distancias)
 
 logger.info("Starting wall-follower robot...")
+
+def test_motores():
+    import time
+    time.sleep(3)
+    logger.info("TEST: Enviando comando a motores...")
+    try:
+        Bridge.call("motores", 100, 100)
+        logger.info("TEST: Comando enviado OK")
+    except Exception as e:
+        logger.error(f"TEST: Error - {e}")
+    time.sleep(2)
+    Bridge.call("motores", 0, 0)
+    logger.info("TEST: Motores detenidos")
+
+threading.Thread(target=test_motores, daemon=True).start()
+
 App.run()
