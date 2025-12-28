@@ -30,7 +30,8 @@ def cargar_params():
                 logger.info(f"Cargados parámetros: Kp={kp:.2f} Kd={kd:.2f}")
                 return [kp, kd]
         except Exception as e:
-            logger.warning(f"Error cargando parámetros: {e}")
+            # logger.warning(f"Error cargando parámetros: {e}")
+            pass
     return [2.5, 12.0]
 
 def guardar_params(kp, kd):
@@ -41,7 +42,8 @@ def guardar_params(kp, kd):
             json.dump(data, f, indent=2)
         logger.info(f"Parámetros guardados: Kp={kp:.2f} Kd={kd:.2f}")
     except Exception as e:
-        logger.warning(f"Error guardando parámetros: {e}")
+        # logger.warning(f"Error guardando parámetros: {e}")
+        pass
 
 # === UTILIDADES ===
 def clip(valor, min_v, max_v):
@@ -53,7 +55,8 @@ def enviar_motores(vI, vD):
         try:
             Bridge.call("motores", vI, vD)
         except Exception as e:
-            logger.warning(f"Error comunicación motores: {e}")
+            # logger.warning(f"Error comunicación motores: {e}")
+            pass
     threading.Thread(target=_call, daemon=True).start()
 
 # === CLASE DE AUTO-CALIBRACIÓN (TWIDDLE) ===
@@ -110,8 +113,8 @@ def al_recibir_distancias(izq, centro, der):
     global error_previo, estado_actual, contador_mensajes
     
     contador_mensajes += 1
-    if contador_mensajes % 50 == 1:
-        logger.info(f"Sensores -> C: {centro:.1f} D: {der:.1f} | Modo: {estado_actual}")
+    # if contador_mensajes % 50 == 1:
+    #     logger.info(f"Sensores -> C: {centro:.1f} D: {der:.1f} | Modo: {estado_actual}")
     
     # --- 1. GESTIÓN DE ESTADOS DE BLOQUEO (GIROS) ---
 
@@ -119,7 +122,7 @@ def al_recibir_distancias(izq, centro, der):
         # Salida: Frente despejado Y volvemos a ver la pared derecha
         if centro > 35 and (0 < der < 35):
             estado_actual = ESTADO_NORMAL
-            logger.info(">>> Vuelta Izquierda COMPLETADA")
+            # logger.info(">>> Vuelta Izquierda COMPLETADA")
         else:
             enviar_motores(-100, 100) # Rotación pura a la izquierda
             return
@@ -128,7 +131,7 @@ def al_recibir_distancias(izq, centro, der):
         # Salida: Recuperamos contacto con la pared derecha
         if 0 < der < 30:
             estado_actual = ESTADO_NORMAL
-            logger.info(">>> Vuelta Derecha COMPLETADA")
+            # logger.info(">>> Vuelta Derecha COMPLETADA")
         else:
             enviar_motores(110, -30) # Pivotar agresivo a la derecha
             return
@@ -171,5 +174,5 @@ def al_recibir_distancias(izq, centro, der):
 
 # Configuración de Bridge y arranque
 Bridge.provide("distancias", al_recibir_distancias)
-logger.info("Robot iniciado. Esperando telemetría...")
+# logger.info("Robot iniciado. Esperando telemetría...")
 App.run()
