@@ -66,6 +66,8 @@ error_previo = 0
 def clip(valor, min_v, max_v):
     return max(min(valor, max_v), min_v)
 
+contador_mensajes = 0
+
 def al_recibir_distancias(izq, centro, der):
     """Callback invocado por el sketch de Arduino vía Bridge.notify.
     
@@ -76,7 +78,12 @@ def al_recibir_distancias(izq, centro, der):
         centro: Distancia sensor frontal en cm
         der: Distancia sensor derecho en cm
     """
-    global error_previo
+    global error_previo, contador_mensajes
+    
+    # Debug: imprimir cada 50 mensajes (~1 segundo)
+    contador_mensajes += 1
+    if contador_mensajes % 50 == 1:
+        logger.info(f"Recibido: centro={centro:.1f} der={der:.1f}")
     
     # --- MÁQUINA DE ESTADOS ---
     
