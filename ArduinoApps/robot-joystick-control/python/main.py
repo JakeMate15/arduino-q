@@ -22,18 +22,30 @@ def on_joystick_move(sid, data):
     x = data.get("x", 0)
     y = data.get("y", 0)
     
-    # Calcular PWM para mostrar en el frontend (opcional, pero útil)
-    vI = y + x
-    vD = y - x
-    # Limitar a -255 a 255
-    vI = max(-255, min(255, vI))
-    vD = max(-255, min(255, vD))
+    # Límite de PWM configurado en Arduino
+    MAX_PWM_LIMIT = 120
+    
+    # Escalar los valores del joystick (-255 a 255) al rango limitado (-MAX_PWM_LIMIT/2 a MAX_PWM_LIMIT/2)
+    # para que al sumarlos (vI = y + x) no excedan el MAX_PWM_LIMIT de 120.
+    def scale(val):
+        return int((val / 255.0) * (MAX_PWM_LIMIT / 2.0))
+
+    scaledX = scale(x)
+    scaledY = scale(y)
+    
+    # Calcular PWM para mostrar en el frontend (reflejando lo que hace el Arduino)
+    vI = scaledY + scaledX
+    vD = scaledY - scaledX
+    
+    # Limitar por seguridad en el reporte
+    vI = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
+    vD = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
     
     try:
-        # Enviar al Arduino via Bridge
+        # Enviar al Arduino via Bridge (enviamos los originales y el Arduino los escala)
         Bridge.call("joystick", x, y)
         
-        # Opcional: Notificar al frontend los PWMs calculados
+        # Opcional: Notificar al frontend los PWMs calculados con el nuevo límite
         web_ui.send_message("motores", {
             "izquierdo": vI,
             "derecho": vD

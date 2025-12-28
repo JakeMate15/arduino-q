@@ -11,6 +11,7 @@ const uint32_t off[] = { 0, 0, 0 };
 #define DIR_B 4 
 #define PWM_B 6
 const bool MOTOR_B_INVERTIDO = true;
+const int MAX_PWM_LIMIT = 120; // Límite de velocidad solicitado
 
 // === ULTRASÓNICOS ===
 #define TRIG_DER 10
@@ -24,7 +25,7 @@ unsigned long ultimoComandoTime = 0;
 const unsigned long WATCHDOG_TIMEOUT = 500; // 500ms
 
 int normPWM(int v) {
-  return (v < 0) ? 0 : (v > 255) ? 255 : v;
+  return (v < 0) ? 0 : (v > MAX_PWM_LIMIT) ? MAX_PWM_LIMIT : v;
 }
 
 void avanza(int velA, int velB, int dirA, int dirB) {
@@ -42,13 +43,18 @@ void controlar_motores(int vI, int vD) {
 
 // Recibe valores X e Y del joystick (-255 a 255)
 void recibir_joystick(int x, int y) {
+  // Escalar los valores del joystick (-255 a 255) al rango del robot (-MAX_PWM_LIMIT a MAX_PWM_LIMIT)
+  // Usamos la mitad del límite para cada eje para que la suma (y+x) no exceda el límite total
+  int scaledX = map(x, -255, 255, -(MAX_PWM_LIMIT/2), (MAX_PWM_LIMIT/2));
+  int scaledY = map(y, -255, 255, -(MAX_PWM_LIMIT/2), (MAX_PWM_LIMIT/2));
+
   // Motor Mixing para dirección diferencial
-  int vI = y + x;
-  int vD = y - x;
+  int vI = scaledY + scaledX;
+  int vD = scaledY - scaledX;
   
-  // Limitar a -255 a 255
-  vI = max(-255, min(255, vI));
-  vD = max(-255, min(255, vD));
+  // Limitar por seguridad final
+  vI = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI));
+  vD = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD));
   
   controlar_motores(vI, vD);
   ultimoComandoTime = millis(); // Reset watchdog
@@ -83,8 +89,8 @@ void setup() {
   pinMode(DIR_A, OUTPUT);
   pinMode(DIR_B, OUTPUT);
   
-  // Test inicial de motores
-  avanza(100, 100, 1, 1);
+  // Test inicial de motores (usando velocidad reducida)
+  avanza(60, 60, 1, 1);
   delay(300);
   avanza(0, 0, 0, 0);
   
