@@ -11,7 +11,11 @@ const errorContainer = document.getElementById('error-container');
 const btnLeft = document.getElementById('btn-turn-left');
 const btnRight = document.getElementById('btn-turn-right');
 
-// ... (Socket.IO init)
+// Inicializar Socket.IO
+const socket = io(`http://${window.location.host}`);
+
+let joystickData = { x: 0, y: 0 };
+let lastSentTime = 0;
 
 // Eventos de botones de giro
 function bindTurnButton(btn, dir) {
@@ -115,4 +119,3 @@ socket.on('motores', (data) => {
 socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
-
