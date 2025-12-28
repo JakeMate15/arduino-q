@@ -8,12 +8,23 @@ const pwmRightEl = document.getElementById('pwm-right');
 const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
+const recToggle = document.getElementById('rec-toggle');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
 
 let joystickData = { x: 0, y: 0 };
 let lastSentTime = 0;
+
+// Lógica de Grabación
+recToggle.addEventListener('change', (e) => {
+    socket.emit('toggle_recording', { active: e.target.checked });
+    if (e.target.checked) {
+        console.log("Grabación iniciada");
+    } else {
+        console.log("Grabación detenida");
+    }
+});
 
 // Inicializar Joystick (nipplejs)
 const joystickZone = document.getElementById('joystick-zone');

@@ -1,13 +1,33 @@
+import csv
+import os
+from datetime import datetime
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
 
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
 
+# --- Configuración de Grabación ---
+ARCHIVO_DATOS = "recorrido_robot.csv"
+grabando = False
+ultimo_pwm_izq = 0
+ultimo_pwm_der = 0
+
+# Inicializar CSV si no existe
+if not os.path.exists(ARCHIVO_DATOS):
+    try:
+        with open(ARCHIVO_DATOS, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['timestamp', 'dist_frontal', 'dist_derecho', 'pwm_izq', 'pwm_der'])
+    except Exception as e:
+        logger.warning(f"No se pudo crear el archivo CSV: {e}")
+
 # Callback para recibir distancias desde el Arduino
 def al_recibir_distancias(d_frontal, d_derecho):
     """Recibe distancias del Arduino y las envía al frontend."""
-    # logger.debug(f"Sensores -> Frontal: {d_frontal:.1f} cm, Derecho: {d_derecho:.1f} cm")
+    global grabando, ultimo_pwm_izq, ultimo_pwm_der
+    
+    # Enviar al UI siempre para visualización
     try:
         web_ui.send_message("sensores", {
             "frontal": round(d_frontal, 1),
@@ -16,48 +36,63 @@ def al_recibir_distancias(d_frontal, d_derecho):
     except Exception as e:
         logger.warning(f"Error enviando distancias al UI: {e}")
 
+    # Lógica de Grabación (Caja Negra)
+    if grabando:
+        # Solo grabar si hay movimiento significativo (evita datos estáticos irrelevantes)
+        if abs(ultimo_pwm_izq) > 5 or abs(ultimo_pwm_der) > 5:
+            try:
+                with open(ARCHIVO_DATOS, 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        datetime.now().isoformat(),
+                        round(d_frontal, 2),
+                        round(d_derecho, 2),
+                        ultimo_pwm_izq,
+                        ultimo_pwm_der
+                    ])
+            except Exception as e:
+                logger.warning(f"Error escribiendo en CSV: {e}")
+
 # Manejador de mensajes del WebSocket (Joystick)
 def on_joystick_move(sid, data):
     """Recibe movimiento del joystick desde el frontend y lo envía al Arduino."""
+    global ultimo_pwm_izq, ultimo_pwm_der
+    
     x = data.get("x", 0)
     y = data.get("y", 0)
     
     # Límite de PWM configurado en Arduino
     MAX_PWM_LIMIT = 150
     
-    # Escalar los valores del joystick (-255 a 255) al rango limitado (-MAX_PWM_LIMIT/2 a MAX_PWM_LIMIT/2)
-    # para que al sumarlos (vI = y + x) no excedan el MAX_PWM_LIMIT de 120.
+    # Escalar los valores del joystick (-255 a 255) al rango limitado
     def scale(val):
         return int((val / 255.0) * (MAX_PWM_LIMIT / 2.0))
 
     scaledX = scale(x)
     scaledY = scale(y)
     
-    # Calcular PWM para mostrar en el frontend (reflejando lo que hace el Arduino)
+    # Calcular PWM para mostrar en el frontend y para grabar
     vI = scaledY + scaledX
     vD = scaledY - scaledX
     
-    # Limitar por seguridad en el reporte
-    vI = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
-    vD = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
+    # Limitar por seguridad
+    ultimo_pwm_izq = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
+    ultimo_pwm_der = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
     
     try:
-        # Enviar al Arduino via Bridge (enviamos los originales y el Arduino los escala)
+        # Enviar al Arduino via Bridge
         Bridge.call("joystick", x, y)
         
-        # Opcional: Notificar al frontend los PWMs calculados con el nuevo límite
+        # Notificar al frontend los PWMs
         web_ui.send_message("motores", {
-            "izquierdo": vI,
-            "derecho": vD
+            "izquierdo": ultimo_pwm_izq,
+            "derecho": ultimo_pwm_der
         })
     except Exception as e:
         logger.warning(f"Error llamando a Bridge.joystick: {e}")
 
-# Registrar callbacks
-Bridge.provide("distancias", al_recibir_distancias)
-web_ui.on_message("joystick", on_joystick_move)
-
 def on_girar(sid, data):
+    global ultimo_pwm_izq, ultimo_pwm_der
     direccion = data.get("dir")
     accion = data.get("action") # "start" o "stop"
     
@@ -67,26 +102,38 @@ def on_girar(sid, data):
     try:
         if accion == "stop":
             Bridge.call("detener")
-            web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
+            ultimo_pwm_izq, ultimo_pwm_der = 0, 0
         elif direccion == "izq":
             Bridge.call("girar_izq")
-            web_ui.send_message("motores", {"izquierdo": -MAX_PWM_LIMIT, "derecho": MAX_PWM_LIMIT})
+            ultimo_pwm_izq, ultimo_pwm_der = -MAX_PWM_LIMIT, MAX_PWM_LIMIT
         elif direccion == "der":
             Bridge.call("girar_der")
-            web_ui.send_message("motores", {"izquierdo": MAX_PWM_LIMIT, "derecho": -MAX_PWM_LIMIT})
+            ultimo_pwm_izq, ultimo_pwm_der = MAX_PWM_LIMIT, -MAX_PWM_LIMIT
+        
+        web_ui.send_message("motores", {"izquierdo": ultimo_pwm_izq, "derecho": ultimo_pwm_der})
     except Exception as e:
         logger.warning(f"Error en comando de giro: {e}")
 
+def on_toggle_recording(sid, data):
+    """Maneja el inicio/fin de la grabación de datos."""
+    global grabando
+    grabando = data.get("active", False)
+    estado = "INICIADA" if grabando else "DETENIDA"
+    logger.info(f"Grabación de datos: {estado}")
+    web_ui.send_message("status", {"message": f"Grabación {estado}"})
+
+# Registrar callbacks
+Bridge.provide("distancias", al_recibir_distancias)
+web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
+web_ui.on_message("toggle_recording", on_toggle_recording)
 
 # Manejar conexión de clientes
 @web_ui.on_connect
 def on_connect(sid):
     logger.info(f"Cliente conectado: {sid}")
-    # Enviar estado inicial o mensaje de bienvenida
     web_ui.send_message("status", {"message": "Conectado al robot"})
 
 if __name__ == "__main__":
-    logger.info("Iniciando aplicación Robot Joystick Control...")
+    logger.info("Iniciando aplicación Robot Joystick Control (Modo Recolección IA)...")
     App.run()
-

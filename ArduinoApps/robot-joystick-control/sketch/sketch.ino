@@ -142,6 +142,6 @@ void loop() {
     matrix.loadFrame(heart);
   }
   
-  delay(50); // Frecuencia de ~20Hz para los sensores
+  delay(20); // Frecuencia de ~50Hz para los sensores (Mejor para entrenamiento IA)
 }
 

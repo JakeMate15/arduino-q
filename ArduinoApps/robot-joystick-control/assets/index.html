@@ -1,16 +1,27 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Control - Joystick</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header>
             <h1>Control de Robot</h1>
-            <div id="connection-status" class="status-disconnected">Desconectado</div>
+            <div class="header-controls">
+                <div id="connection-status" class="status-disconnected">Desconectado</div>
+                <div class="recording-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="rec-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="rec-label">REC</span>
+                </div>
+            </div>
         </header>
 
         <main>
@@ -61,5 +72,5 @@
     <script src="libs/nipplejs.min.js"></script>
     <script src="app.js"></script>
 </body>
-</html>
 
+</html>
