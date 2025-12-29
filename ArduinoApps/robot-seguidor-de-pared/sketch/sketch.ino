@@ -1,13 +1,13 @@
 #include <Arduino_RouterBridge.h>
 
-// === MOTORES ===
-#define DIRA 2
-#define PWMA 5
-#define DIRB 4
-#define PWMB 6
+Arduino_LED_Matrix matrix;
 
-const bool INV_A = false;
-const bool INV_B = true;
+// === MOTORES ===
+#define DIR_A 2 
+#define PWM_A 5
+#define DIR_B 4 
+#define PWM_B 6
+const bool MOTOR_B_INVERTIDO = true;
 
 int limitar(int v, int lo, int hi){
   if (v < lo) return lo;
@@ -15,32 +15,17 @@ int limitar(int v, int lo, int hi){
   return v;
 }
 
-// v en rango [-255..255]. signo = dirección
-void motorA(int v){
-  v = limitar(v, -255, 255);
-  bool forward = (v >= 0);
-  int pwm = abs(v);
-
-  if (INV_A) forward = !forward;
-
-  digitalWrite(DIRA, forward ? HIGH : LOW);
-  analogWrite(PWMA, pwm);
+void avanza(int velA, int velB, int dirA, int dirB) {
+  digitalWrite(DIR_A, dirA);
+  digitalWrite(DIR_B, MOTOR_B_INVERTIDO ? (dirB ^ 1) : dirB);
+  analogWrite(PWM_A, limitar(velA, 0, 255));
+  analogWrite(PWM_B, limitar(velB, 0, 255));
 }
 
-void motorB(int v){
-  v = limitar(v, -255, 255);
-  bool forward = (v >= 0);
-  int pwm = abs(v);
-
-  if (INV_B) forward = !forward;
-
-  digitalWrite(DIRB, forward ? HIGH : LOW);
-  analogWrite(PWMB, pwm);
-}
-
-void motores(int vA, int vB){
-  motorA(vA);
-  motorB(vB);
+void motores(int vI, int vD) {
+  int dirA = (vI >= 0) ? 1 : 0;
+  int dirB = (vD >= 0) ? 1 : 0;
+  avanza(abs(vI), abs(vD), dirA, dirB);
 }
 
 void detener(){
@@ -48,35 +33,27 @@ void detener(){
 }
 
 void adelante(int pwm){
-  pwm = limitar(pwm, 0, 255);
   motores(pwm, pwm);
 }
 
 void atras(int pwm){
-  pwm = limitar(pwm, 0, 255);
   motores(-pwm, -pwm);
 }
 
 void curvaIzq(int base, int delta){
-  base = limitar(base, 0, 255);
-  delta = limitar(delta, 0, 255);
   motores(base - delta, base + delta);
 }
 
 void curvaDer(int base, int delta){
-  base = limitar(base, 0, 255);
-  delta = limitar(delta, 0, 255);
   motores(base + delta, base - delta);
 }
 
 void rotarIzq(int pwm){
-  pwm = limitar(pwm, 0, 255);
-  motores(-pwm, +pwm);
+  motores(-pwm, pwm);
 }
 
 void rotarDer(int pwm){
-  pwm = limitar(pwm, 0, 255);
-  motores(+pwm, -pwm);
+  motores(pwm, -pwm);
 }
 
 // === ULTRASÓNICOS ===
@@ -142,39 +119,26 @@ void setup() {
   pinMode(ECHO_DER, INPUT);
 
   // Motores
-  pinMode(DIRA, OUTPUT);
-  pinMode(DIRB, OUTPUT);
-  pinMode(PWMA, OUTPUT);
-  pinMode(PWMB, OUTPUT);
+  pinMode(DIR_A, OUTPUT);
+  pinMode(DIR_B, OUTPUT);
+
+  // Test rápido de motores al arrancar
+  motores(150, 150);
+  delay(200);
+  detener();
 
   detener();
 }
 
 void loop() {
-  // Medición de sensores
+  // 1. Medición de sensores
   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
-  delay(50);
   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
+  
+  // Notificar a Python
   Bridge.notify("distancias", dC, dR);
 
-  // Pruebas de movimiento
-  adelante(120);
-  delay(1000);
-  detener();
-  delay(300);
-
-  curvaIzq(120, 40);
-  delay(1000);
-  detener();
-  delay(300);
-
-  curvaDer(120, 40);
-  delay(1000);
-  detener();
-  delay(300);
-
-  rotarIzq(90);
-  delay(700);
-  detener();
-  delay(800);
+  adelante(180);
+  
+  delay(10);
 }
