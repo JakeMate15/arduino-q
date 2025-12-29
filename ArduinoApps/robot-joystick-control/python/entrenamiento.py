@@ -1,10 +1,17 @@
+"""
+Entrenamiento del modelo IA - Entrena XGBoost con los datos procesados.
+"""
+import os
 import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
 import joblib
 
+# Directorio de datos
+DIR_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
 # Cargar el mapa purificado
-df = pd.read_csv('datos_mejorados.csv')
+df = pd.read_csv(os.path.join(DIR_DATA, 'datos_mejorados.csv'))
 
 X = df[['f_grid', 'd_grid']]
 y = df[['pwm_izq', 'pwm_der']]
@@ -24,10 +31,11 @@ modelo = XGBRegressor(
 print("Entrenando con el mapa de situaciones...")
 modelo.fit(X_scaled, y)
 
-# Guardar
-joblib.dump(modelo, 'cerebro_robot.pkl')
-joblib.dump(scaler, 'escalador.pkl')
+# Guardar en carpeta data/
+joblib.dump(modelo, os.path.join(DIR_DATA, 'cerebro_robot.pkl'))
+joblib.dump(scaler, os.path.join(DIR_DATA, 'escalador.pkl'))
 
 # Verificación rápida
 score = modelo.score(X_scaled, y)
 print(f"Precisión sobre el mapa: {score:.4f}")
+print(f"Modelo guardado en: {DIR_DATA}")

@@ -21,17 +21,61 @@
                     </label>
                     <span class="rec-label">REC</span>
                 </div>
-                <div class="autopilot-switch">
-                    <label class="switch">
-                        <input type="checkbox" id="auto-toggle">
-                        <span class="slider round"></span>
-                    </label>
-                    <span class="auto-label">AUTO</span>
-                </div>
             </div>
         </header>
 
         <main>
+            <!-- Mode Selector -->
+            <div class="mode-section card">
+                <h2>Modo de Control</h2>
+                <div class="mode-selector">
+                    <button id="mode-manual" class="mode-btn active" data-mode="manual">
+                        <span class="mode-icon">🎮</span>
+                        <span class="mode-name">Manual</span>
+                    </button>
+                    <button id="mode-pid" class="mode-btn" data-mode="pid">
+                        <span class="mode-icon">🎯</span>
+                        <span class="mode-name">PID</span>
+                    </button>
+                    <button id="mode-ia" class="mode-btn" data-mode="ia" disabled>
+                        <span class="mode-icon">🤖</span>
+                        <span class="mode-name">IA</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PID Parameters (hidden by default) -->
+            <div id="pid-params-section" class="card pid-params-section" style="display: none;">
+                <h2>Parámetros PID</h2>
+                <div class="pid-controls">
+                    <div class="pid-row">
+                        <label>
+                            <span>Distancia objetivo (cm)</span>
+                            <input type="number" id="pid-setpoint" value="15" min="5" max="50" step="1">
+                        </label>
+                        <label>
+                            <span>Velocidad base</span>
+                            <input type="number" id="pid-speed" value="100" min="50" max="200" step="10">
+                        </label>
+                    </div>
+                    <div class="pid-row">
+                        <label>
+                            <span>Kp</span>
+                            <input type="number" id="pid-kp" value="2.0" min="0" max="10" step="0.1">
+                        </label>
+                        <label>
+                            <span>Ki</span>
+                            <input type="number" id="pid-ki" value="0.1" min="0" max="2" step="0.01">
+                        </label>
+                        <label>
+                            <span>Kd</span>
+                            <input type="number" id="pid-kd" value="0.5" min="0" max="5" step="0.1">
+                        </label>
+                    </div>
+                    <button id="pid-apply" class="btn-apply">Aplicar</button>
+                </div>
+            </div>
+
             <div class="camera-section card">
                 <h2>Cámara en Vivo</h2>
                 <div id="videoFeedContainer">
@@ -73,13 +117,19 @@
                 </div>
             </div>
 
-            <div class="joystick-section">
+            <div class="joystick-section" id="joystick-section">
                 <div id="joystick-zone"></div>
                 <div class="turn-buttons">
                     <button id="btn-left" class="btn-turn">↺ Izquierda</button>
                     <button id="btn-right" class="btn-turn">Derecha ↻</button>
                 </div>
                 <p class="hint">Usa el joystick o los botones de giro</p>
+            </div>
+
+            <!-- Auto mode indicator -->
+            <div id="auto-indicator" class="auto-indicator" style="display: none;">
+                <div class="auto-pulse"></div>
+                <span>Modo Autónomo Activo</span>
             </div>
         </main>
 

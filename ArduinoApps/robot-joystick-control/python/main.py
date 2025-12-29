@@ -1,239 +1,237 @@
-import csv
+"""
+Robot Joystick Control - Main Application
+Orchestrates controllers (Manual, PID, IA) and handles WebSocket communication.
+"""
 import os
-import joblib
-import numpy as np
-from datetime import datetime
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
 from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
+from controllers import ManualController, PIDController, IAController
+from utils import Recorder
+
+# --- Initialization ---
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
 
-# Iniciar el motor de video (proporciona el stream en puerto 4912)
+# Start video stream (provides stream on port 4912)
 camera_stream = VideoObjectDetection()
 
-# --- Configuración de IA (Piloto Automático) ---
+# --- Paths ---
 DIR_PYTHON = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(DIR_PYTHON, 'cerebro_robot.pkl')
-SCALER_PATH = os.path.join(DIR_PYTHON, 'escalador.pkl')
-modelo = None
-escalador = None
-piloto_automatico = False
+DIR_DATA = os.path.join(DIR_PYTHON, 'data')
 
-# Logging detallado para depuración
-logger.info(f"Buscando modelo IA en: {DIR_PYTHON}")
-logger.info(f"Ruta modelo: {MODEL_PATH}")
-logger.info(f"Ruta escalador: {SCALER_PATH}")
-logger.info(f"Modelo existe: {os.path.exists(MODEL_PATH)}")
-logger.info(f"Escalador existe: {os.path.exists(SCALER_PATH)}")
+# --- Controllers ---
+controllers = {
+    "manual": ManualController(),
+    "pid": PIDController(setpoint=15, kp=2.0, ki=0.1, kd=0.5, base_speed=100),
+    "ia": IAController(data_dir=DIR_DATA)
+}
 
-if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
-    try:
-        logger.info("Intentando cargar modelo y escalador...")
-        modelo = joblib.load(MODEL_PATH)
-        escalador = joblib.load(SCALER_PATH)
-        logger.info("✓ Modelo y escalador IA cargados correctamente.")
-        logger.info(f"Tipo de modelo: {type(modelo)}")
-    except ImportError as e:
-        logger.error(f"Error de importación al cargar modelo: {e}")
-        logger.error("Asegúrate de que joblib esté instalado: pip3 install --break-system-packages joblib")
-    except Exception as e:
-        logger.error(f"Error cargando el modelo IA: {e}")
-        logger.error(f"Tipo de error: {type(e).__name__}")
-        import traceback
-        logger.error(traceback.format_exc())
-else:
-    if not os.path.exists(MODEL_PATH):
-        logger.warning(f"✗ Archivo modelo no encontrado: {MODEL_PATH}")
-    if not os.path.exists(SCALER_PATH):
-        logger.warning(f"✗ Archivo escalador no encontrado: {SCALER_PATH}")
-    logger.warning("El piloto automático no estará disponible hasta que los archivos .pkl estén presentes.")
+# Active mode and controller
+active_mode = "manual"
+active_controller = controllers["manual"]
 
-# --- Configuración de Grabación ---
-DIR_DATOS = os.path.dirname(os.path.abspath(__file__))
-ARCHIVO_DATOS = os.path.join(DIR_DATOS, "recorrido_robot.csv")
-grabando = False
+# --- Recorder ---
+recorder = Recorder(data_dir=DIR_DATA)
+
+# --- State ---
 ultimo_pwm_izq = 0
 ultimo_pwm_der = 0
 
-# Inicializar CSV si no existe
-if not os.path.exists(ARCHIVO_DATOS):
-    try:
-        with open(ARCHIVO_DATOS, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['timestamp', 'dist_frontal', 'dist_derecho', 'pwm_izq', 'pwm_der'])
-        logger.info(f"Archivo de datos creado: {ARCHIVO_DATOS}")
-    except Exception as e:
-        logger.warning(f"No se pudo crear el archivo CSV: {e}")
-else:
-    logger.info(f"Archivo de datos existente encontrado: {ARCHIVO_DATOS}")
+# Log startup info
+logger.info(f"Directorio de datos: {DIR_DATA}")
+logger.info(f"Modelo IA disponible: {controllers['ia'].is_available()}")
+logger.info(f"Archivo de grabación: {recorder.get_filepath()}")
 
-# Callback para recibir distancias desde el Arduino
-def al_recibir_distancias(d_frontal, d_derecho):
-    """Recibe distancias del Arduino y las envía al frontend."""
-    global grabando, ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico, modelo, escalador
+
+def set_mode(mode: str) -> bool:
+    """
+    Switch to a different control mode.
     
-    # Enviar al UI siempre para visualización
+    Args:
+        mode: One of 'manual', 'pid', 'ia'
+        
+    Returns:
+        True if mode was changed successfully
+    """
+    global active_mode, active_controller
+    
+    if mode not in controllers:
+        logger.warning(f"Modo desconocido: {mode}")
+        return False
+    
+    # Check IA availability
+    if mode == "ia" and not controllers["ia"].is_available():
+        logger.error("Modelo IA no disponible")
+        web_ui.send_message("status", {
+            "message": "Error: Modelo IA no disponible. Entrena el modelo primero."
+        })
+        return False
+    
+    # Deactivate current controller
+    active_controller.on_deactivate()
+    
+    # Stop motors when switching modes
+    Bridge.call("detener")
+    
+    # Switch to new controller
+    active_mode = mode
+    active_controller = controllers[mode]
+    active_controller.on_activate()
+    
+    logger.info(f"Modo cambiado a: {mode}")
+    web_ui.send_message("mode_changed", {"mode": mode})
+    web_ui.send_message("status", {"message": f"Modo: {mode.upper()}"})
+    
+    return True
+
+
+def al_recibir_distancias(d_frontal: float, d_derecho: float):
+    """
+    Callback for sensor data from Arduino.
+    Processes data through active controller and sends commands.
+    """
+    global ultimo_pwm_izq, ultimo_pwm_der
+    
+    # Send sensor data to UI
     try:
         web_ui.send_message("sensores", {
             "frontal": round(d_frontal, 1),
             "derecho": round(d_derecho, 1)
         })
     except Exception as e:
-        logger.warning(f"Error enviando distancias al UI: {e}")
-
-    # Lógica de Piloto Automático
-    if piloto_automatico and modelo and escalador:
+        logger.warning(f"Error enviando sensores al UI: {e}")
+    
+    # Process through active controller (only for autonomous modes)
+    if active_mode in ("pid", "ia"):
         try:
-            # Preparar datos para la IA (usando d_frontal como centro y d_derecho como der)
-            X_input = np.array([[d_frontal, d_derecho]])
-            X_scaled = escalador.transform(X_input)
+            pwm_izq, pwm_der = active_controller.compute(d_frontal, d_derecho)
+            ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
             
-            # Predicción
-            prediccion = modelo.predict(X_scaled)
-            vI, vD = prediccion[0]
+            # Send to Arduino
+            Bridge.call("motores", pwm_izq, pwm_der)
             
-            # Seguridad y redondeo
-            vI = int(np.clip(vI, -255, 255))
-            vD = int(np.clip(vD, -255, 255))
-            
-            ultimo_pwm_izq, ultimo_pwm_der = vI, vD
-            
-            # Enviar orden al Arduino
-            Bridge.call("motores", vI, vD)
-            
-            # Actualizar UI
+            # Update UI
             web_ui.send_message("motores", {
-                "izquierdo": vI,
-                "derecho": vD
+                "izquierdo": pwm_izq,
+                "derecho": pwm_der
             })
         except Exception as e:
-            logger.warning(f"Error en Piloto Automático: {e}")
-
-    # Lógica de Grabación (Caja Negra)
-    if grabando:
-        if abs(ultimo_pwm_izq) > 5 or abs(ultimo_pwm_der) > 5:
-            try:
-                with open(ARCHIVO_DATOS, 'a', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow([
-                        datetime.now().isoformat(),
-                        round(d_frontal, 2),
-                        round(d_derecho, 2),
-                        ultimo_pwm_izq,
-                        ultimo_pwm_der
-                    ])
-            except Exception as e:
-                logger.warning(f"Error escribiendo en CSV: {e}")
-
-# Manejador de mensajes del WebSocket (Joystick)
-def on_joystick_move(sid, data):
-    """Recibe movimiento del joystick desde el frontend y lo envía al Arduino."""
-    global ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico
+            logger.warning(f"Error en controlador {active_mode}: {e}")
     
-    # Si el piloto automático está activo, ignoramos el joystick manual
-    if piloto_automatico:
-        return
+    # Record data if recording is active
+    if recorder.is_recording():
+        recorder.record(d_frontal, d_derecho, ultimo_pwm_izq, ultimo_pwm_der)
 
+
+def on_joystick_move(sid, data):
+    """Handle joystick input from frontend."""
+    global ultimo_pwm_izq, ultimo_pwm_der
+    
+    # Only process in manual mode
+    if active_mode != "manual":
+        return
+    
     x = data.get("x", 0)
     y = data.get("y", 0)
     
-    MAX_PWM_LIMIT = 255
-    def scale(val):
-        return int((val / 255.0) * (MAX_PWM_LIMIT / 2.0))
-
-    scaledX = scale(x)
-    scaledY = scale(y)
-    
-    vI = scaledY + scaledX
-    vD = scaledY - scaledX
-    
-    ultimo_pwm_izq = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
-    ultimo_pwm_der = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
+    manual = controllers["manual"]
+    pwm_izq, pwm_der = manual.process_joystick(x, y)
+    ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
     
     try:
         Bridge.call("joystick", x, y)
         web_ui.send_message("motores", {
-            "izquierdo": ultimo_pwm_izq,
-            "derecho": ultimo_pwm_der
+            "izquierdo": pwm_izq,
+            "derecho": pwm_der
         })
     except Exception as e:
-        logger.warning(f"Error llamando a Bridge.joystick: {e}")
+        logger.warning(f"Error en joystick: {e}")
+
 
 def on_girar(sid, data):
-    global ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico
+    """Handle turn button input from frontend."""
+    global ultimo_pwm_izq, ultimo_pwm_der
     
-    if piloto_automatico:
+    # Only process in manual mode
+    if active_mode != "manual":
         return
-
+    
     direccion = data.get("dir")
     accion = data.get("action")
-    VEL_GIRO = 150
+    
+    manual = controllers["manual"]
+    pwm_izq, pwm_der = manual.process_turn(direccion, accion)
+    ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
     
     try:
         if accion == "stop":
             Bridge.call("detener")
-            ultimo_pwm_izq, ultimo_pwm_der = 0, 0
         elif direccion == "izq":
             Bridge.call("girar_izq")
-            ultimo_pwm_izq, ultimo_pwm_der = -VEL_GIRO, VEL_GIRO
         elif direccion == "der":
             Bridge.call("girar_der")
-            ultimo_pwm_izq, ultimo_pwm_der = VEL_GIRO, -VEL_GIRO
         
-        web_ui.send_message("motores", {"izquierdo": ultimo_pwm_izq, "derecho": ultimo_pwm_der})
+        web_ui.send_message("motores", {
+            "izquierdo": pwm_izq,
+            "derecho": pwm_der
+        })
     except Exception as e:
-        logger.warning(f"Error en comando de giro: {e}")
+        logger.warning(f"Error en giro: {e}")
+
+
+def on_change_mode(sid, data):
+    """Handle mode change request from frontend."""
+    mode = data.get("mode", "manual")
+    set_mode(mode)
+
 
 def on_toggle_recording(sid, data):
-    global grabando
-    grabando = data.get("active", False)
-    estado = "INICIADA" if grabando else "DETENIDA"
-    logger.info(f"Grabación de datos: {estado} -> Archivo: {ARCHIVO_DATOS}")
+    """Handle recording toggle from frontend."""
+    active = data.get("active", False)
+    recorder.toggle(active)
+    estado = "INICIADA" if recorder.is_recording() else "DETENIDA"
+    logger.info(f"Grabación: {estado}")
     web_ui.send_message("status", {"message": f"Grabación {estado}"})
 
-def on_toggle_autopilot(sid, data):
-    global piloto_automatico, modelo, escalador
-    
-    piloto_automatico = data.get("active", False)
-    
-    if piloto_automatico:
-        # Verificar disponibilidad antes de activar
-        if not modelo or not escalador:
-            logger.error("Intento de activar piloto automático sin modelo disponible")
-            logger.error(f"Modelo cargado: {modelo is not None}, Escalador cargado: {escalador is not None}")
-            web_ui.send_message("status", {
-                "message": f"Error: Modelo IA no disponible. Verifica que cerebro_robot.pkl y escalador.pkl estén en {DIR_PYTHON}"
-            })
-            piloto_automatico = False  # Forzar desactivación
-            return
-        
-        logger.info("Piloto Automático: ACTIVADO")
-        web_ui.send_message("status", {"message": "Piloto Automático ACTIVADO"})
-    else:
-        logger.info("Piloto Automático: DESACTIVADO")
-        web_ui.send_message("status", {"message": "Piloto Automático DESACTIVADO"})
-        
-        # Si se desactiva, detener motores por seguridad
-        try:
-            Bridge.call("detener")
-        except Exception as e:
-            logger.warning(f"Error al detener motores: {e}")
 
-# Registrar callbacks
+def on_pid_params(sid, data):
+    """Handle PID parameter update from frontend."""
+    pid = controllers["pid"]
+    pid.set_parameters(
+        setpoint=data.get("setpoint"),
+        kp=data.get("kp"),
+        ki=data.get("ki"),
+        kd=data.get("kd"),
+        base_speed=data.get("base_speed")
+    )
+    logger.info(f"PID params actualizados: {pid.get_parameters()}")
+    web_ui.send_message("status", {"message": "Parámetros PID actualizados"})
+
+
+# --- Register callbacks ---
 Bridge.provide("distancias", al_recibir_distancias)
 web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
+web_ui.on_message("change_mode", on_change_mode)
 web_ui.on_message("toggle_recording", on_toggle_recording)
-web_ui.on_message("toggle_autopilot", on_toggle_autopilot)
+web_ui.on_message("pid_params", on_pid_params)
 
-# Manejar conexión de clientes
+
 @web_ui.on_connect
 def on_connect(sid):
+    """Handle new client connection."""
     logger.info(f"Cliente conectado: {sid}")
+    
+    # Send current state to new client
     web_ui.send_message("status", {"message": "Conectado al robot"})
+    web_ui.send_message("mode_changed", {"mode": active_mode})
+    web_ui.send_message("pid_params", controllers["pid"].get_parameters())
+    web_ui.send_message("ia_available", {"available": controllers["ia"].is_available()})
+
 
 if __name__ == "__main__":
-    logger.info("Iniciando aplicación Robot Joystick Control (Modo IA Habilitado)...")
+    logger.info("Iniciando Robot Joystick Control (Modular)...")
+    logger.info(f"Modos disponibles: {list(controllers.keys())}")
     App.run()

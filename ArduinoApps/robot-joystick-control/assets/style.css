@@ -7,6 +7,8 @@
     --text-color: #333;
     --error-red: #e74c3c;
     --success-green: #2ecc71;
+    --pid-orange: #f39c12;
+    --ia-purple: #9b59b6;
 }
 
 body {
@@ -47,14 +49,14 @@ header {
     gap: 15px;
 }
 
-/* Switch de grabación y piloto automático */
-.recording-switch, .autopilot-switch {
+/* Switch de grabación */
+.recording-switch {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.rec-label, .auto-label {
+.rec-label {
     font-weight: bold;
     font-size: 0.8rem;
     color: #fff;
@@ -99,11 +101,6 @@ input:checked + .slider {
     background-color: var(--error-red);
 }
 
-/* El switch de AUTO en verde cuando está activo */
-.autopilot-switch input:checked + .slider {
-    background-color: var(--success-green);
-}
-
 input:checked + .slider:before {
     transform: translateX(20px);
 }
@@ -142,6 +139,156 @@ main {
     gap: 20px;
 }
 
+/* Mode Selector */
+.mode-section {
+    padding: 15px;
+}
+
+.mode-selector {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.mode-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-btn:hover:not(:disabled) {
+    border-color: var(--arduino-teal);
+    transform: translateY(-2px);
+}
+
+.mode-btn.active {
+    border-color: var(--arduino-teal);
+    background-color: var(--arduino-light);
+}
+
+.mode-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mode-btn[data-mode="pid"].active {
+    border-color: var(--pid-orange);
+    background-color: #fef5e7;
+}
+
+.mode-btn[data-mode="ia"].active {
+    border-color: var(--ia-purple);
+    background-color: #f4ecf7;
+}
+
+.mode-icon {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.mode-name {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+/* PID Parameters */
+.pid-params-section {
+    background-color: #fef5e7;
+    border: 1px solid var(--pid-orange);
+}
+
+.pid-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pid-row {
+    display: flex;
+    gap: 10px;
+}
+
+.pid-row label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pid-row label span {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.pid-row input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.pid-row input:focus {
+    outline: none;
+    border-color: var(--pid-orange);
+}
+
+.btn-apply {
+    padding: 10px 20px;
+    background-color: var(--pid-orange);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-apply:hover {
+    background-color: #e67e22;
+}
+
+/* Auto mode indicator */
+.auto-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px;
+    background: linear-gradient(135deg, var(--arduino-light), #d4efdf);
+    border-radius: 10px;
+    font-weight: bold;
+    color: var(--arduino-blue);
+}
+
+.auto-pulse {
+    width: 12px;
+    height: 12px;
+    background-color: var(--success-green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+    }
+}
+
 .telemetry-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -149,7 +296,6 @@ main {
 }
 
 .camera-section {
-    margin-bottom: 20px;
     padding: 10px;
     background-color: var(--card-bg);
 }
@@ -281,5 +427,12 @@ main {
     .telemetry-section {
         grid-template-columns: 1fr;
     }
+    
+    .mode-selector {
+        flex-direction: column;
+    }
+    
+    .pid-row {
+        flex-direction: column;
+    }
 }
-

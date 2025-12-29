@@ -1,8 +1,15 @@
+"""
+Procesamiento de datos - Prepara los datos de entrenamiento.
+Agrupa datos por celdas de distancia y calcula promedios.
+"""
+import os
 import pandas as pd
-import numpy as np
+
+# Directorio de datos
+DIR_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 # 1. Cargar el dataset con todas las situaciones
-df = pd.read_csv('recorrido_robot.csv')
+df = pd.read_csv(os.path.join(DIR_DATA, 'recorrido_robot.csv'))
 
 # 2. Agrupar por "Celdas de Situación"
 # Redondeamos a cada 5cm para crear grupos de situaciones similares
@@ -22,5 +29,5 @@ df_mapa = df.groupby(['f_grid', 'd_grid']).agg({
 df_mapa = df_mapa.dropna()
 
 # 5. Guardar el mapa de navegación
-df_mapa.to_csv('datos_mejorados.csv', index=False)
+df_mapa.to_csv(os.path.join(DIR_DATA, 'datos_mejorados.csv'), index=False)
 print(f"Situaciones únicas aprendidas: {len(df_mapa)}")

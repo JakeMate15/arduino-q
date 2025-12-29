@@ -1,5 +1,5 @@
 // Configuración
-const SEND_INTERVAL = 100; // ms (Aumentado un poco para estabilidad)
+const SEND_INTERVAL = 100; // ms (Heartbeat para el Watchdog)
 
 // Elementos del DOM
 const statusEl = document.getElementById('connection-status');
@@ -9,12 +9,30 @@ const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
 const recToggle = document.getElementById('rec-toggle');
-const autoToggle = document.getElementById('auto-toggle');
+const joystickSection = document.getElementById('joystick-section');
+const autoIndicator = document.getElementById('auto-indicator');
+const pidParamsSection = document.getElementById('pid-params-section');
+
+// Mode buttons
+const modeBtns = document.querySelectorAll('.mode-btn');
+const modeManual = document.getElementById('mode-manual');
+const modePid = document.getElementById('mode-pid');
+const modeIa = document.getElementById('mode-ia');
+
+// PID parameter inputs
+const pidSetpoint = document.getElementById('pid-setpoint');
+const pidSpeed = document.getElementById('pid-speed');
+const pidKp = document.getElementById('pid-kp');
+const pidKi = document.getElementById('pid-ki');
+const pidKd = document.getElementById('pid-kd');
+const pidApply = document.getElementById('pid-apply');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
 
-let isAutoPilot = false;
+// Estado actual
+let currentMode = 'manual';
+let iaAvailable = false;
 
 // Estado global de control
 let controlState = {
@@ -23,7 +41,54 @@ let controlState = {
     dir: null
 };
 
-// Control por Teclado
+// --- Mode Management ---
+function setMode(mode) {
+    if (mode === 'ia' && !iaAvailable) {
+        console.warn('IA mode not available');
+        return;
+    }
+    
+    currentMode = mode;
+    socket.emit('change_mode', { mode: mode });
+    
+    // Update UI
+    modeBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    
+    // Show/hide joystick section
+    if (mode === 'manual') {
+        joystickSection.style.display = 'flex';
+        autoIndicator.style.display = 'none';
+        pidParamsSection.style.display = 'none';
+    } else {
+        joystickSection.style.display = 'none';
+        autoIndicator.style.display = 'flex';
+        pidParamsSection.style.display = mode === 'pid' ? 'block' : 'none';
+    }
+}
+
+// Mode button click handlers
+modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (!btn.disabled) {
+            setMode(btn.dataset.mode);
+        }
+    });
+});
+
+// PID parameter apply button
+pidApply.addEventListener('click', () => {
+    socket.emit('pid_params', {
+        setpoint: parseFloat(pidSetpoint.value),
+        base_speed: parseInt(pidSpeed.value),
+        kp: parseFloat(pidKp.value),
+        ki: parseFloat(pidKi.value),
+        kd: parseFloat(pidKd.value)
+    });
+});
+
+// --- Keyboard Control ---
 const pressedKeys = new Set();
 
 document.addEventListener('keydown', (e) => {
@@ -43,6 +108,8 @@ document.addEventListener('keyup', (e) => {
 });
 
 function updateControlFromKeyboard() {
+    if (currentMode !== 'manual') return;
+    
     if (pressedKeys.size === 0) {
         controlState.type = 'stop';
         controlState.data = { x: 0, y: 0 };
@@ -75,31 +142,26 @@ function updateControlFromKeyboard() {
     controlState.data = { x, y };
 }
 
-// Ciclo de envío constante (Heartbeat para el Watchdog)
+// --- Heartbeat (Watchdog) ---
 setInterval(() => {
+    // Only send manual controls in manual mode
+    if (currentMode !== 'manual') return;
+    
     if (controlState.type === 'joystick') {
         socket.emit('joystick', controlState.data);
     } else if (controlState.type === 'turn') {
         socket.emit('girar', { dir: controlState.dir, action: 'start' });
     } else if (controlState.type === 'stop') {
-        // Opcional: enviar stop periódico para asegurar que el robot se detenga
         socket.emit('joystick', { x: 0, y: 0 });
     }
 }, SEND_INTERVAL);
 
-// Lógica de Grabación
+// --- Recording ---
 recToggle.addEventListener('change', (e) => {
     socket.emit('toggle_recording', { active: e.target.checked });
 });
 
-// Lógica de Piloto Automático
-autoToggle.addEventListener('change', (e) => {
-    isAutoPilot = e.target.checked;
-    socket.emit('toggle_autopilot', { active: isAutoPilot });
-    console.log("Piloto Automático: " + (isAutoPilot ? "activado" : "desactivado"));
-});
-
-// Inicializar Joystick (nipplejs)
+// --- Joystick (nipplejs) ---
 const joystickZone = document.getElementById('joystick-zone');
 const joystick = nipplejs.create({
     zone: joystickZone,
@@ -109,8 +171,9 @@ const joystick = nipplejs.create({
     size: 150
 });
 
-// Eventos del Joystick
 joystick.on('move', (evt, data) => {
+    if (currentMode !== 'manual') return;
+    
     if (data.distance) {
         const force = Math.min(data.distance / 75, 1);
         const angle = data.angle.radian;
@@ -123,38 +186,39 @@ joystick.on('move', (evt, data) => {
 });
 
 joystick.on('end', () => {
+    if (currentMode !== 'manual') return;
     controlState.type = 'stop';
     controlState.data = { x: 0, y: 0 };
 });
 
-// Botones de Giro
+// --- Turn Buttons ---
 const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 
 function handleTurnStart(dir) {
+    if (currentMode !== 'manual') return;
     controlState.type = 'turn';
     controlState.dir = dir;
 }
 
 function handleTurnStop() {
+    if (currentMode !== 'manual') return;
     controlState.type = 'stop';
 }
 
-// Eventos para Botón Izquierdo
 btnLeft.addEventListener('mousedown', () => handleTurnStart('izq'));
 btnLeft.addEventListener('mouseup', handleTurnStop);
 btnLeft.addEventListener('mouseleave', handleTurnStop);
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); handleTurnStart('izq'); });
 btnLeft.addEventListener('touchend', handleTurnStop);
 
-// Eventos para Botón Derecho
 btnRight.addEventListener('mousedown', () => handleTurnStart('der'));
 btnRight.addEventListener('mouseup', handleTurnStop);
 btnRight.addEventListener('mouseleave', handleTurnStop);
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); handleTurnStart('der'); });
 btnRight.addEventListener('touchend', handleTurnStop);
 
-// Comunicación Socket.IO
+// --- Socket.IO Events ---
 socket.on('connect', () => {
     statusEl.textContent = 'Conectado';
     statusEl.className = 'status-connected';
@@ -175,6 +239,14 @@ socket.on('sensores', (data) => {
     }
     if (data.derecho !== undefined) {
         distDerechoEl.textContent = `${data.derecho} cm`;
+        // Highlight when close to PID setpoint
+        const setpoint = parseFloat(pidSetpoint.value);
+        const diff = Math.abs(data.derecho - setpoint);
+        if (currentMode === 'pid' && diff < 3) {
+            distDerechoEl.style.color = '#2ecc71'; // Green when on target
+        } else {
+            distDerechoEl.style.color = '#00878F';
+        }
     }
 });
 
@@ -187,7 +259,40 @@ socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
 
-// --- Lógica de la Cámara ---
+socket.on('mode_changed', (data) => {
+    currentMode = data.mode;
+    modeBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === data.mode);
+    });
+    
+    // Update UI visibility
+    if (data.mode === 'manual') {
+        joystickSection.style.display = 'flex';
+        autoIndicator.style.display = 'none';
+        pidParamsSection.style.display = 'none';
+    } else {
+        joystickSection.style.display = 'none';
+        autoIndicator.style.display = 'flex';
+        pidParamsSection.style.display = data.mode === 'pid' ? 'block' : 'none';
+    }
+});
+
+socket.on('pid_params', (data) => {
+    // Update PID input fields with server values
+    if (data.setpoint !== undefined) pidSetpoint.value = data.setpoint;
+    if (data.base_speed !== undefined) pidSpeed.value = data.base_speed;
+    if (data.kp !== undefined) pidKp.value = data.kp;
+    if (data.ki !== undefined) pidKi.value = data.ki;
+    if (data.kd !== undefined) pidKd.value = data.kd;
+});
+
+socket.on('ia_available', (data) => {
+    iaAvailable = data.available;
+    modeIa.disabled = !iaAvailable;
+    modeIa.title = iaAvailable ? 'Modo IA (XGBoost)' : 'Modelo IA no disponible - Entrena primero';
+});
+
+// --- Camera ---
 const iframe = document.getElementById('dynamicIframe');
 const placeholder = document.getElementById('videoPlaceholder');
 const currentHostname = window.location.hostname;
@@ -206,10 +311,9 @@ iframe.onload = () => {
 };
 
 const startLoadingCamera = () => {
-    // Intentar cargar el stream de video
     if (iframe.style.display === 'none') {
         iframe.src = streamUrl;
     }
 };
 
-cameraIntervalId = setInterval(startLoadingCamera, 2000); // Reintentar cada 2 segundos
+cameraIntervalId = setInterval(startLoadingCamera, 2000);
