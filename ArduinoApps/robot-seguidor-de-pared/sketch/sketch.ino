@@ -2,22 +2,22 @@
 
 // === MOTORES ===
 #define DIRA 2
-#define DIRB 3
-#define PWMA 5
+#define DIRB 5
+#define PWMA 4
 #define PWMB 6
 
 const bool INV_A = false;  // pon true si el lado A va al revés
 const bool INV_B = false;  // pon true si el lado B va al revés
 
-int clampi(int v, int lo, int hi){
+int limitar(int v, int lo, int hi){
   if (v < lo) return lo;
   if (v > hi) return hi;
   return v;
 }
 
 // v en rango [-255..255]. signo = dirección
-void setMotorA(int v){
-  v = clampi(v, -255, 255);
+void motorA(int v){
+  v = limitar(v, -255, 255);
   bool forward = (v >= 0);
   int pwm = abs(v);
 
@@ -27,8 +27,8 @@ void setMotorA(int v){
   analogWrite(PWMA, pwm);
 }
 
-void setMotorB(int v){
-  v = clampi(v, -255, 255);
+void motorB(int v){
+  v = limitar(v, -255, 255);
   bool forward = (v >= 0);
   int pwm = abs(v);
 
@@ -38,45 +38,45 @@ void setMotorB(int v){
   analogWrite(PWMB, pwm);
 }
 
-void setDrive(int vA, int vB){
-  setMotorA(vA);
-  setMotorB(vB);
+void motores(int vA, int vB){
+  motorA(vA);
+  motorB(vB);
 }
 
-void stopRobot(){
-  setDrive(0, 0);
+void detener(){
+  motores(0, 0);
 }
 
-void forward(int pwm){
-  pwm = clampi(pwm, 0, 255);
-  setDrive(pwm, pwm);
+void adelante(int pwm){
+  pwm = limitar(pwm, 0, 255);
+  motores(pwm, pwm);
 }
 
-void backward(int pwm){
-  pwm = clampi(pwm, 0, 255);
-  setDrive(-pwm, -pwm);
+void atras(int pwm){
+  pwm = limitar(pwm, 0, 255);
+  motores(-pwm, -pwm);
 }
 
-void turnLeftArc(int base, int delta){
-  base  = clampi(base, 0, 255);
-  delta = clampi(delta, 0, 255);
-  setDrive(base - delta, base + delta);
+void curvaIzq(int base, int delta){
+  base  = limitar(base, 0, 255);
+  delta = limitar(delta, 0, 255);
+  motores(base - delta, base + delta);
 }
 
-void turnRightArc(int base, int delta){
-  base  = clampi(base, 0, 255);
-  delta = clampi(delta, 0, 255);
-  setDrive(base + delta, base - delta);
+void curvaDer(int base, int delta){
+  base  = limitar(base, 0, 255);
+  delta = limitar(delta, 0, 255);
+  motores(base + delta, base - delta);
 }
 
-void pivotLeft(int pwm){
-  pwm = clampi(pwm, 0, 255);
-  setDrive(-pwm, +pwm);
+void rotarIzq(int pwm){
+  pwm = limitar(pwm, 0, 255);
+  motores(-pwm, +pwm);
 }
 
-void pivotRight(int pwm){
-  pwm = clampi(pwm, 0, 255);
-  setDrive(+pwm, -pwm);
+void rotarDer(int pwm){
+  pwm = limitar(pwm, 0, 255);
+  motores(+pwm, -pwm);
 }
 
 // === ULTRASÓNICOS ===
@@ -147,14 +147,34 @@ void setup() {
   pinMode(PWMA, OUTPUT);
   pinMode(PWMB, OUTPUT);
 
-  stopRobot();
+  detener();
 }
 
 void loop() {
+  // Medición de sensores
   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
   delay(50);
   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
   Bridge.notify("distancias", dC, dR);
 
-  delay(80);
+  // Pruebas de movimiento
+  adelante(120);
+  delay(1000);
+  detener();
+  delay(300);
+
+  curvaIzq(120, 40);
+  delay(1000);
+  detener();
+  delay(300);
+
+  curvaDer(120, 40);
+  delay(1000);
+  detener();
+  delay(300);
+
+  rotarIzq(90);
+  delay(700);
+  detener();
+  delay(800);
 }
