@@ -2,5 +2,6 @@ name: Robot Joystick Control
 icon: 🤖
 description: Control de robot de dos motores mediante joystick web con visualización de PWM y sensores
 bricks:
+  - arduino:video_streaming
   - arduino:web_ui
 

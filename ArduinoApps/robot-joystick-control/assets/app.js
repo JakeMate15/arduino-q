@@ -176,3 +176,30 @@ socket.on('motores', (data) => {
 socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
+
+// --- Lógica de la Cámara ---
+const iframe = document.getElementById('dynamicIframe');
+const placeholder = document.getElementById('videoPlaceholder');
+const currentHostname = window.location.hostname;
+const targetPort = 4912;
+const targetPath = '/embed';
+const streamUrl = `http://${currentHostname}:${targetPort}${targetPath}`;
+
+let cameraIntervalId;
+
+iframe.onload = () => {
+    if (cameraIntervalId) {
+        clearInterval(cameraIntervalId);
+    }
+    placeholder.style.display = 'none';
+    iframe.style.display = 'block';
+};
+
+const startLoadingCamera = () => {
+    // Intentar cargar el stream de video
+    if (iframe.style.display === 'none') {
+        iframe.src = streamUrl;
+    }
+};
+
+cameraIntervalId = setInterval(startLoadingCamera, 2000); // Reintentar cada 2 segundos

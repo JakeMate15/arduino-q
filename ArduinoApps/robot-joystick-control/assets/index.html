@@ -25,6 +25,17 @@
         </header>
 
         <main>
+            <div class="camera-section card">
+                <h2>Cámara en Vivo</h2>
+                <div id="videoFeedContainer">
+                    <div id="videoPlaceholder" class="camera-status">
+                        <p class="feedback-text">Buscando Cámara...</p>
+                    </div>
+                    <iframe id="dynamicIframe" title="Video stream" frameBorder="0"
+                        style="display: none; width: 100%; height: 100%; border-radius: 8px;"></iframe>
+                </div>
+            </div>
+
             <div class="telemetry-section">
                 <div class="card motors-card">
                     <h2>Motores (PWM)</h2>
