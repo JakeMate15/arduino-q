@@ -186,6 +186,6 @@ void loop() {
   // esperaParado(800);
 
   rotarDer(150);
-  delay(1600);
+  delay(400);
   esperaParado(800);
 }
