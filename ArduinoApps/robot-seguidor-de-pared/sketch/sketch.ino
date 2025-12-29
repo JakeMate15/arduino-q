@@ -138,13 +138,9 @@ void setup() {
 }
 
 void loop() {
-  // 1. Medición de sensores
   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
+  delay(50);
   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
-  
-  // 2. Enviamos los datos a Python
   Bridge.notify("distancias", dC, dR);
-
-  // Esperamos un poco para no saturar el Bridge
-  delay(20);
+  delay(50);
 }
