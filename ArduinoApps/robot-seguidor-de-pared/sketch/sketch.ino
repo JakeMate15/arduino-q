@@ -1,5 +1,84 @@
 #include <Arduino_RouterBridge.h>
 
+// === MOTORES ===
+#define DIRA 2
+#define DIRB 3
+#define PWMA 5
+#define PWMB 6
+
+const bool INV_A = false;  // pon true si el lado A va al revés
+const bool INV_B = false;  // pon true si el lado B va al revés
+
+int clampi(int v, int lo, int hi){
+  if (v < lo) return lo;
+  if (v > hi) return hi;
+  return v;
+}
+
+// v en rango [-255..255]. signo = dirección
+void setMotorA(int v){
+  v = clampi(v, -255, 255);
+  bool forward = (v >= 0);
+  int pwm = abs(v);
+
+  if (INV_A) forward = !forward;
+
+  digitalWrite(DIRA, forward ? HIGH : LOW);
+  analogWrite(PWMA, pwm);
+}
+
+void setMotorB(int v){
+  v = clampi(v, -255, 255);
+  bool forward = (v >= 0);
+  int pwm = abs(v);
+
+  if (INV_B) forward = !forward;
+
+  digitalWrite(DIRB, forward ? HIGH : LOW);
+  analogWrite(PWMB, pwm);
+}
+
+void setDrive(int vA, int vB){
+  setMotorA(vA);
+  setMotorB(vB);
+}
+
+void stopRobot(){
+  setDrive(0, 0);
+}
+
+void forward(int pwm){
+  pwm = clampi(pwm, 0, 255);
+  setDrive(pwm, pwm);
+}
+
+void backward(int pwm){
+  pwm = clampi(pwm, 0, 255);
+  setDrive(-pwm, -pwm);
+}
+
+void turnLeftArc(int base, int delta){
+  base  = clampi(base, 0, 255);
+  delta = clampi(delta, 0, 255);
+  setDrive(base - delta, base + delta);
+}
+
+void turnRightArc(int base, int delta){
+  base  = clampi(base, 0, 255);
+  delta = clampi(delta, 0, 255);
+  setDrive(base + delta, base - delta);
+}
+
+void pivotLeft(int pwm){
+  pwm = clampi(pwm, 0, 255);
+  setDrive(-pwm, +pwm);
+}
+
+void pivotRight(int pwm){
+  pwm = clampi(pwm, 0, 255);
+  setDrive(+pwm, -pwm);
+}
+
 // === ULTRASÓNICOS ===
 #define TRIG_DER 10
 #define ECHO_DER 11
@@ -56,11 +135,19 @@ float distanciaCM_mediana(int trig, int echo) {
 void setup() {
   Bridge.begin();
 
+  // Sensores
   pinMode(TRIG_CENTRO, OUTPUT);
   pinMode(ECHO_CENTRO, INPUT);
   pinMode(TRIG_DER, OUTPUT);
   pinMode(ECHO_DER, INPUT);
 
+  // Motores
+  pinMode(DIRA, OUTPUT);
+  pinMode(DIRB, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(PWMB, OUTPUT);
+
+  stopRobot();
 }
 
 void loop() {
