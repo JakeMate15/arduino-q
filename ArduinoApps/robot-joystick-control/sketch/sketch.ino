@@ -111,13 +111,15 @@ void setup() {
 // Funciones para giro mediante botones (llamadas desde Python/Web)
 void girar_izquierda() {
   // Motor Izquierdo atrás, Motor Derecho adelante para rotar sobre su eje
-  controlar_motores(-MAX_PWM_LIMIT, MAX_PWM_LIMIT);
+  // Limitado a 150 para que no sea tan brusco
+  controlar_motores(-150, 150);
   ultimoComandoTime = millis();
 }
 
 void girar_derecha() {
   // Motor Izquierdo adelante, Motor Derecho atrás para rotar sobre su eje
-  controlar_motores(MAX_PWM_LIMIT, -MAX_PWM_LIMIT);
+  // Limitado a 150 para que no sea tan brusco
+  controlar_motores(150, -150);
   ultimoComandoTime = millis();
 }
 

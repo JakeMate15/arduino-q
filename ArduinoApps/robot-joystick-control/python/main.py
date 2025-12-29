@@ -101,8 +101,8 @@ def on_girar(sid, data):
     direccion = data.get("dir")
     accion = data.get("action") # "start" o "stop"
     
-    # Límite de PWM configurado en Arduino
-    MAX_PWM_LIMIT = 255
+    # Límite específico para giro con botones
+    VEL_GIRO = 150
     
     try:
         if accion == "stop":
@@ -110,10 +110,10 @@ def on_girar(sid, data):
             ultimo_pwm_izq, ultimo_pwm_der = 0, 0
         elif direccion == "izq":
             Bridge.call("girar_izq")
-            ultimo_pwm_izq, ultimo_pwm_der = -MAX_PWM_LIMIT, MAX_PWM_LIMIT
+            ultimo_pwm_izq, ultimo_pwm_der = -VEL_GIRO, VEL_GIRO
         elif direccion == "der":
             Bridge.call("girar_der")
-            ultimo_pwm_izq, ultimo_pwm_der = MAX_PWM_LIMIT, -MAX_PWM_LIMIT
+            ultimo_pwm_izq, ultimo_pwm_der = VEL_GIRO, -VEL_GIRO
         
         web_ui.send_message("motores", {"izquierdo": ultimo_pwm_izq, "derecho": ultimo_pwm_der})
     except Exception as e:
