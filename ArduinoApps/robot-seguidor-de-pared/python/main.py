@@ -1,5 +1,5 @@
 import time
-from arduino.app_utils import App, Bridge, Logger
+from arduino.app_utils import *
 
 logger = Logger("seguidor-pared")
 
@@ -48,4 +48,4 @@ def al_recibir_distancias(dC, dR):
 Bridge.provide("distancias", al_recibir_distancias)
 
 logger.info("\n\n\n\n\nIniciando App de Seguidor de Pared...")
-App.run(user_loop=loop)
+App.run()
