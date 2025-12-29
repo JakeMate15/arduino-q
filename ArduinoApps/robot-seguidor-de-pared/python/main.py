@@ -47,9 +47,5 @@ def al_recibir_distancias(dC, dR):
 
 Bridge.provide("distancias", al_recibir_distancias)
 
-def loop():
-    time.sleep(1)
-
-if __name__ == "__main__":
-    logger.info("\n\n\n\n\nIniciando App de Seguidor de Pared...")
-    App.run(user_loop=loop)
+logger.info("\n\n\n\n\nIniciando App de Seguidor de Pared...")
+App.run(user_loop=loop)
