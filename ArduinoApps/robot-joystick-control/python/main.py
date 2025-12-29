@@ -163,6 +163,9 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
                     # Save permanent config
                     save_pid_config(controllers["pid"].get_parameters())
                     
+                    # Send new params to UI immediately
+                    web_ui.send_message("pid_params", controllers["pid"].get_parameters())
+                    
                     logger.info(f"Auto-calibración completada: {results}")
                     web_ui.send_message("status", {"message": "Auto-calibración COMPLETADA"})
                     

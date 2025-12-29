@@ -335,10 +335,19 @@ socket.on('autotune_progress', (data) => {
     autotunePercent.textContent = percent;
     
     if (data.finished) {
+        const infoText = document.querySelector('.autotune-info span');
+        if (infoText) {
+            infoText.innerHTML = `✅ ¡Éxito! Kp:${data.kp} Ki:${data.ki} Kd:${data.kd}`;
+            infoText.style.color = 'var(--success-green)';
+        }
+        
         setTimeout(() => {
             autotuneContainer.style.display = 'none';
-            // Results will be updated via the 'pid_params' event which follows
-        }, 2000);
+            if (infoText) {
+                infoText.innerHTML = 'Calibrando... Mantén el robot cerca de la pared';
+                infoText.style.color = '';
+            }
+        }, 5000); // 5 seconds to read results
     }
 });
 
