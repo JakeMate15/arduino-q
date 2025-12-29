@@ -1,15 +1,19 @@
 import time
+from arduino.app_utils import App, Bridge, Logger
 
-from arduino.app_utils import App
+logger = Logger("seguidor-pared")
 
-print("Hello world!")
+def al_recibir_distancias(dist_centro, dist_derecha):
+    """Callback que se ejecuta cuando el Arduino envía distancias."""
+    logger.info(f"Sensores -> Centro: {dist_centro:.1f} cm | Derecha: {dist_derecha:.1f} cm")
 
+# Registramos la función para recibir la notificación "distancias" desde el Arduino
+Bridge.provide("distancias", al_recibir_distancias)
 
 def loop():
-    """This function is called repeatedly by the App framework."""
-    # You can replace this with any code you want your App to run repeatedly.
-    time.sleep(10)
+    """Esta función se ejecuta repetidamente."""
+    time.sleep(1)
 
-
-# See: https://docs.arduino.cc/software/app-lab/tutorials/getting-started/#app-run
-App.run(user_loop=loop)
+if __name__ == "__main__":
+    logger.info("Iniciando App Seguidor de Pared...")
+    App.run(user_loop=loop)
