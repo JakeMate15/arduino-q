@@ -1,5 +1,5 @@
 // Configuración
-const SEND_INTERVAL = 50; // ms
+const SEND_INTERVAL = 100; // ms (Aumentado un poco para estabilidad)
 
 // Elementos del DOM
 const statusEl = document.getElementById('connection-status');
@@ -13,17 +13,28 @@ const recToggle = document.getElementById('rec-toggle');
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
 
-let joystickData = { x: 0, y: 0 };
-let lastSentTime = 0;
+// Estado global de control
+let controlState = {
+    type: 'stop', // 'joystick', 'turn', 'stop'
+    data: { x: 0, y: 0 },
+    dir: null
+};
+
+// Ciclo de envío constante (Heartbeat para el Watchdog)
+setInterval(() => {
+    if (controlState.type === 'joystick') {
+        socket.emit('joystick', controlState.data);
+    } else if (controlState.type === 'turn') {
+        socket.emit('girar', { dir: controlState.dir, action: 'start' });
+    } else if (controlState.type === 'stop') {
+        // Opcional: enviar stop periódico para asegurar que el robot se detenga
+        socket.emit('joystick', { x: 0, y: 0 });
+    }
+}, SEND_INTERVAL);
 
 // Lógica de Grabación
 recToggle.addEventListener('change', (e) => {
     socket.emit('toggle_recording', { active: e.target.checked });
-    if (e.target.checked) {
-        console.log("Grabación iniciada");
-    } else {
-        console.log("Grabación detenida");
-    }
 });
 
 // Inicializar Joystick (nipplejs)
@@ -39,44 +50,32 @@ const joystick = nipplejs.create({
 // Eventos del Joystick
 joystick.on('move', (evt, data) => {
     if (data.distance) {
-        // Normalizar a rango -255 a 255
-        // data.vector.x e y están en rango -1 a 1
-        const force = Math.min(data.distance / 75, 1); // 75 es el radio (size/2)
+        const force = Math.min(data.distance / 75, 1);
         const angle = data.angle.radian;
-
         const x = Math.round(Math.cos(angle) * force * 255);
         const y = Math.round(Math.sin(angle) * force * 255);
 
-        joystickData = { x, y };
-
-        // Throttling: Enviar solo si ha pasado el intervalo
-        const now = Date.now();
-        if (now - lastSentTime > SEND_INTERVAL) {
-            sendJoystickData();
-            lastSentTime = now;
-        }
+        controlState.type = 'joystick';
+        controlState.data = { x, y };
     }
 });
 
 joystick.on('end', () => {
-    joystickData = { x: 0, y: 0 };
-    sendJoystickData();
+    controlState.type = 'stop';
+    controlState.data = { x: 0, y: 0 };
 });
-
-function sendJoystickData() {
-    socket.emit('joystick', joystickData);
-}
 
 // Botones de Giro
 const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 
 function handleTurnStart(dir) {
-    socket.emit('girar', { dir: dir, action: 'start' });
+    controlState.type = 'turn';
+    controlState.dir = dir;
 }
 
 function handleTurnStop() {
-    socket.emit('girar', { action: 'stop' });
+    controlState.type = 'stop';
 }
 
 // Eventos para Botón Izquierdo
@@ -110,7 +109,6 @@ socket.on('disconnect', () => {
 socket.on('sensores', (data) => {
     if (data.frontal !== undefined) {
         distFrontalEl.textContent = `${data.frontal} cm`;
-        // Cambio de color si está muy cerca
         distFrontalEl.style.color = (data.frontal > 0 && data.frontal < 15) ? '#e74c3c' : '#00878F';
     }
     if (data.derecho !== undefined) {
@@ -126,4 +124,3 @@ socket.on('motores', (data) => {
 socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
-
