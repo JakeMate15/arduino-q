@@ -14,16 +14,19 @@ int limitar(int v, int lo, int hi){
 }
 
 void avanza(int velA, int velB, int dirA, int dirB) {
-  digitalWrite(DIR_A, dirA);
-  digitalWrite(DIR_B, MOTOR_B_INVERTIDO ? (dirB ^ 1) : dirB);
+  digitalWrite(DIR_A, dirA ? HIGH : LOW);
+  bool dB = dirB ? true : false;
+  if (MOTOR_B_INVERTIDO) dB = !dB;
+  digitalWrite(DIR_B, dB ? HIGH : LOW);
+
   analogWrite(PWM_A, limitar(velA, 0, 255));
   analogWrite(PWM_B, limitar(velB, 0, 255));
 }
 
 void motores(int vI, int vD) {
-  int dirA = (vI >= 0) ? 1 : 0;
-  int dirB = (vD >= 0) ? 1 : 0;
-  avanza(abs(vI), abs(vD), dirA, dirB);
+  vI = limitar(vI, -255, 255);
+  vD = limitar(vD, -255, 255);
+  avanza(abs(vI), abs(vD), (vI >= 0), (vD >= 0));
 }
 
 void detener(){
@@ -39,11 +42,15 @@ void atras(int pwm){
 }
 
 void curvaIzq(int base, int delta){
-  motores(base - delta, base + delta);
+  int vI = limitar(base - delta, 0, 255);
+  int vD = limitar(base + delta, 0, 255);
+  motores(vI, vD);
 }
 
 void curvaDer(int base, int delta){
-  motores(base + delta, base - delta);
+  int vI = limitar(base + delta, 0, 255);
+  int vD = limitar(base - delta, 0, 255);
+  motores(vI, vD);
 }
 
 void rotarIzq(int pwm){
@@ -129,14 +136,16 @@ void setup() {
 }
 
 void loop() {
-  // 1. Medición de sensores
   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
+  delay(50); // evita interferencia
   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
-  
+
   // Notificar a Python
   Bridge.notify("distancias", dC, dR);
 
-  adelante(180);
-  
-  delay(10);
+  if (dC < 25) detener();
+  else adelante(180);
+
+  delay(50); // ~10 Hz
 }
+
