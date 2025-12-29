@@ -3,12 +3,13 @@ import os
 from datetime import datetime
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
-from arduino.app_bricks.video_streaming import VideoStreaming
+from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
-# Iniciar solo el stream de video (sin detección de objetos)
-camera_stream = VideoStreaming()
+# Iniciar el motor de video (proporciona el stream en puerto 4912)
+# No registraremos callbacks de detección para que solo sea video
+camera_stream = VideoObjectDetection()
 
 # --- Configuración de Grabación ---
 # El archivo se guarda en el directorio de la aplicación Python
