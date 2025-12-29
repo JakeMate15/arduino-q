@@ -6,8 +6,8 @@
 #define PWMA 4
 #define PWMB 6
 
-const bool INV_A = false;  // pon true si el lado A va al revés
-const bool INV_B = false;  // pon true si el lado B va al revés
+const bool INV_A = false;
+const bool INV_B = true;
 
 int limitar(int v, int lo, int hi){
   if (v < lo) return lo;
@@ -58,13 +58,13 @@ void atras(int pwm){
 }
 
 void curvaIzq(int base, int delta){
-  base  = limitar(base, 0, 255);
+  base = limitar(base, 0, 255);
   delta = limitar(delta, 0, 255);
   motores(base - delta, base + delta);
 }
 
 void curvaDer(int base, int delta){
-  base  = limitar(base, 0, 255);
+  base = limitar(base, 0, 255);
   delta = limitar(delta, 0, 255);
   motores(base + delta, base - delta);
 }
