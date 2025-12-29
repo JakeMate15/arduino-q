@@ -104,6 +104,7 @@ void setup() {
   Bridge.provide("girar_izq", girar_izquierda);
   Bridge.provide("girar_der", girar_derecha);
   Bridge.provide("detener", detener_giro);
+  Bridge.provide("motores", controlar_motores); // Recibir PWM directo (para IA)
   
   ultimoComandoTime = millis();
 }

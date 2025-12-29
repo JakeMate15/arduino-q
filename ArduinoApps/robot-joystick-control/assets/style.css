@@ -47,14 +47,14 @@ header {
     gap: 15px;
 }
 
-/* Switch de grabación */
-.recording-switch {
+/* Switch de grabación y piloto automático */
+.recording-switch, .autopilot-switch {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.rec-label {
+.rec-label, .auto-label {
     font-weight: bold;
     font-size: 0.8rem;
     color: #fff;
@@ -97,6 +97,11 @@ header {
 
 input:checked + .slider {
     background-color: var(--error-red);
+}
+
+/* El switch de AUTO en verde cuando está activo */
+.autopilot-switch input:checked + .slider {
+    background-color: var(--success-green);
 }
 
 input:checked + .slider:before {

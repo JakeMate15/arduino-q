@@ -9,9 +9,12 @@ const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
 const recToggle = document.getElementById('rec-toggle');
+const autoToggle = document.getElementById('auto-toggle');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
+
+let isAutoPilot = false;
 
 // Estado global de control
 let controlState = {
@@ -87,6 +90,13 @@ setInterval(() => {
 // Lógica de Grabación
 recToggle.addEventListener('change', (e) => {
     socket.emit('toggle_recording', { active: e.target.checked });
+});
+
+// Lógica de Piloto Automático
+autoToggle.addEventListener('change', (e) => {
+    isAutoPilot = e.target.checked;
+    socket.emit('toggle_autopilot', { active: isAutoPilot });
+    console.log("Piloto Automático: " + (isAutoPilot ? "activado" : "desactivado"));
 });
 
 // Inicializar Joystick (nipplejs)

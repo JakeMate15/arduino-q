@@ -1,5 +1,7 @@
 import csv
 import os
+import joblib
+import numpy as np
 from datetime import datetime
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
@@ -7,12 +9,28 @@ from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
+
 # Iniciar el motor de video (proporciona el stream en puerto 4912)
-# No registraremos callbacks de detección para que solo sea video
 camera_stream = VideoObjectDetection()
 
+# --- Configuración de IA (Piloto Automático) ---
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'cerebro_robot.pkl')
+SCALER_PATH = os.path.join(os.path.dirname(__file__), 'escalador.pkl')
+modelo = None
+escalador = None
+piloto_automatico = False
+
+if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
+    try:
+        modelo = joblib.load(MODEL_PATH)
+        escalador = joblib.load(SCALER_PATH)
+        logger.info("Modelo y escalador IA cargados correctamente.")
+    except Exception as e:
+        logger.warning(f"Error cargando el modelo IA: {e}")
+else:
+    logger.warning("No se encontraron los archivos del modelo IA (.pkl). El piloto automático no estará disponible.")
+
 # --- Configuración de Grabación ---
-# El archivo se guarda en el directorio de la aplicación Python
 DIR_DATOS = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_DATOS = os.path.join(DIR_DATOS, "recorrido_robot.csv")
 grabando = False
@@ -34,7 +52,7 @@ else:
 # Callback para recibir distancias desde el Arduino
 def al_recibir_distancias(d_frontal, d_derecho):
     """Recibe distancias del Arduino y las envía al frontend."""
-    global grabando, ultimo_pwm_izq, ultimo_pwm_der
+    global grabando, ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico, modelo, escalador
     
     # Enviar al UI siempre para visualización
     try:
@@ -45,9 +63,36 @@ def al_recibir_distancias(d_frontal, d_derecho):
     except Exception as e:
         logger.warning(f"Error enviando distancias al UI: {e}")
 
+    # Lógica de Piloto Automático
+    if piloto_automatico and modelo and escalador:
+        try:
+            # Preparar datos para la IA (usando d_frontal como centro y d_derecho como der)
+            X_input = np.array([[d_frontal, d_derecho]])
+            X_scaled = escalador.transform(X_input)
+            
+            # Predicción
+            prediccion = modelo.predict(X_scaled)
+            vI, vD = prediccion[0]
+            
+            # Seguridad y redondeo
+            vI = int(np.clip(vI, -255, 255))
+            vD = int(np.clip(vD, -255, 255))
+            
+            ultimo_pwm_izq, ultimo_pwm_der = vI, vD
+            
+            # Enviar orden al Arduino
+            Bridge.call("motores", vI, vD)
+            
+            # Actualizar UI
+            web_ui.send_message("motores", {
+                "izquierdo": vI,
+                "derecho": vD
+            })
+        except Exception as e:
+            logger.warning(f"Error en Piloto Automático: {e}")
+
     # Lógica de Grabación (Caja Negra)
     if grabando:
-        # Solo grabar si hay movimiento significativo (evita datos estáticos irrelevantes)
         if abs(ultimo_pwm_izq) > 5 or abs(ultimo_pwm_der) > 5:
             try:
                 with open(ARCHIVO_DATOS, 'a', newline='') as f:
@@ -65,34 +110,30 @@ def al_recibir_distancias(d_frontal, d_derecho):
 # Manejador de mensajes del WebSocket (Joystick)
 def on_joystick_move(sid, data):
     """Recibe movimiento del joystick desde el frontend y lo envía al Arduino."""
-    global ultimo_pwm_izq, ultimo_pwm_der
+    global ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico
     
+    # Si el piloto automático está activo, ignoramos el joystick manual
+    if piloto_automatico:
+        return
+
     x = data.get("x", 0)
     y = data.get("y", 0)
     
-    # Límite de PWM configurado en Arduino
     MAX_PWM_LIMIT = 255
-    
-    # Escalar los valores del joystick (-255 a 255) al rango limitado
     def scale(val):
         return int((val / 255.0) * (MAX_PWM_LIMIT / 2.0))
 
     scaledX = scale(x)
     scaledY = scale(y)
     
-    # Calcular PWM para mostrar en el frontend y para grabar
     vI = scaledY + scaledX
     vD = scaledY - scaledX
     
-    # Limitar por seguridad
     ultimo_pwm_izq = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vI))
     ultimo_pwm_der = max(-MAX_PWM_LIMIT, min(MAX_PWM_LIMIT, vD))
     
     try:
-        # Enviar al Arduino via Bridge
         Bridge.call("joystick", x, y)
-        
-        # Notificar al frontend los PWMs
         web_ui.send_message("motores", {
             "izquierdo": ultimo_pwm_izq,
             "derecho": ultimo_pwm_der
@@ -101,11 +142,13 @@ def on_joystick_move(sid, data):
         logger.warning(f"Error llamando a Bridge.joystick: {e}")
 
 def on_girar(sid, data):
-    global ultimo_pwm_izq, ultimo_pwm_der
-    direccion = data.get("dir")
-    accion = data.get("action") # "start" o "stop"
+    global ultimo_pwm_izq, ultimo_pwm_der, piloto_automatico
     
-    # Límite específico para giro con botones
+    if piloto_automatico:
+        return
+
+    direccion = data.get("dir")
+    accion = data.get("action")
     VEL_GIRO = 150
     
     try:
@@ -124,18 +167,35 @@ def on_girar(sid, data):
         logger.warning(f"Error en comando de giro: {e}")
 
 def on_toggle_recording(sid, data):
-    """Maneja el inicio/fin de la grabación de datos."""
     global grabando
     grabando = data.get("active", False)
     estado = "INICIADA" if grabando else "DETENIDA"
     logger.info(f"Grabación de datos: {estado} -> Archivo: {ARCHIVO_DATOS}")
     web_ui.send_message("status", {"message": f"Grabación {estado}"})
 
+def on_toggle_autopilot(sid, data):
+    global piloto_automatico, modelo, escalador
+    if not modelo or not escalador:
+        web_ui.send_message("status", {"message": "Error: Modelo IA no disponible"})
+        return
+    
+    piloto_automatico = data.get("active", False)
+    estado = "ACTIVADO" if piloto_automatico else "DESACTIVADO"
+    logger.info(f"Piloto Automático: {estado}")
+    web_ui.send_message("status", {"message": f"Piloto Automático {estado}"})
+    
+    # Si se desactiva, detener motores por seguridad
+    if not piloto_automatico:
+        try:
+            Bridge.call("detener")
+        except: pass
+
 # Registrar callbacks
 Bridge.provide("distancias", al_recibir_distancias)
 web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
 web_ui.on_message("toggle_recording", on_toggle_recording)
+web_ui.on_message("toggle_autopilot", on_toggle_autopilot)
 
 # Manejar conexión de clientes
 @web_ui.on_connect
@@ -144,5 +204,5 @@ def on_connect(sid):
     web_ui.send_message("status", {"message": "Conectado al robot"})
 
 if __name__ == "__main__":
-    logger.info("Iniciando aplicación Robot Joystick Control (Modo Recolección IA)...")
+    logger.info("Iniciando aplicación Robot Joystick Control (Modo IA Habilitado)...")
     App.run()
