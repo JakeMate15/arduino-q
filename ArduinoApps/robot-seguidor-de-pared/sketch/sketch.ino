@@ -36,6 +36,21 @@ float distanciaCM(int trig, int echo) {
   return (dur * VEL_SONIDO) / 2.0f;
 }
 
+float median3(float a, float b, float c) {
+  if ((a <= b && b <= c) || (c <= b && b <= a)) return b;
+  if ((b <= a && a <= c) || (c <= a && a <= b)) return a;
+  return c;
+}
+
+float distanciaCM_mediana(int trig, int echo) {
+  float a = distanciaCM(trig, echo);
+  delay(10);
+  float b = distanciaCM(trig, echo);
+  delay(10);
+  float c = distanciaCM(trig, echo);
+  return median3(a, b, c);
+}
+
 void setup() {
   Bridge.begin();
 
