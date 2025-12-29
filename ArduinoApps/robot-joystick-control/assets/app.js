@@ -1,3 +1,15 @@
+// Silenciar mensajes de detección del framework
+const originalConsoleLog = console.log;
+console.log = function(...args) {
+    // Filtrar mensajes de "classification Object" del framework
+    const message = args.join(' ');
+    if (message.includes('classification Object')) {
+        return; // Silenciar estos mensajes
+    }
+    // Permitir todos los demás mensajes
+    originalConsoleLog.apply(console, args);
+};
+
 // Configuración
 const SEND_INTERVAL = 100; // ms (Heartbeat para el Watchdog)
 
@@ -12,6 +24,8 @@ const recToggle = document.getElementById('rec-toggle');
 const joystickSection = document.getElementById('joystick-section');
 const autoIndicator = document.getElementById('auto-indicator');
 const pidParamsSection = document.getElementById('pid-params-section');
+const pidToggle = document.getElementById('pid-toggle');
+const pidStatusLabel = document.getElementById('pid-status-label');
 
 // Mode buttons
 const modeBtns = document.querySelectorAll('.mode-btn');
@@ -65,6 +79,12 @@ function setMode(mode) {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
         pidParamsSection.style.display = mode === 'pid' ? 'block' : 'none';
+        
+        // Always ensure PID is toggled OFF when switching modes for safety
+        if (pidToggle) {
+            pidToggle.checked = false;
+            pidStatusLabel.textContent = 'OFF';
+        }
     }
 }
 
@@ -86,6 +106,13 @@ pidApply.addEventListener('click', () => {
         ki: parseFloat(pidKi.value),
         kd: parseFloat(pidKd.value)
     });
+});
+
+// PID Activation Toggle
+pidToggle.addEventListener('change', (e) => {
+    const active = e.target.checked;
+    socket.emit('toggle_pid', { active: active });
+    pidStatusLabel.textContent = active ? 'ON' : 'OFF';
 });
 
 // --- Keyboard Control ---

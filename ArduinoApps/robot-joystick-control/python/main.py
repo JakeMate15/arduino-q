@@ -38,6 +38,7 @@ recorder = Recorder(data_dir=DIR_DATA)
 # --- State ---
 ultimo_pwm_izq = 0
 ultimo_pwm_der = 0
+pid_active = False  # New state for PID activation
 
 # Log startup info
 logger.info(f"Directorio de datos: {DIR_DATA}")
@@ -80,6 +81,10 @@ def set_mode(mode: str) -> bool:
     active_controller = controllers[mode]
     active_controller.on_activate()
     
+    # Reset PID activation when switching
+    global pid_active
+    pid_active = False
+    
     logger.info(f"Modo cambiado a: {mode}")
     web_ui.send_message("mode_changed", {"mode": mode})
     web_ui.send_message("status", {"message": f"Modo: {mode.upper()}"})
@@ -92,7 +97,7 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
     Callback for sensor data from Arduino.
     Processes data through active controller and sends commands.
     """
-    global ultimo_pwm_izq, ultimo_pwm_der
+    global ultimo_pwm_izq, ultimo_pwm_der, pid_active
     
     # Send sensor data to UI
     try:
@@ -105,6 +110,10 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
     
     # Process through active controller (only for autonomous modes)
     if active_mode in ("pid", "ia"):
+        # If in PID mode, only compute if active
+        if active_mode == "pid" and not pid_active:
+            return
+
         try:
             pwm_izq, pwm_der = active_controller.compute(d_frontal, d_derecho)
             ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
@@ -210,6 +219,20 @@ def on_pid_params(sid, data):
     web_ui.send_message("status", {"message": "Parámetros PID actualizados"})
 
 
+def on_toggle_pid(sid, data):
+    """Handle PID activation toggle."""
+    global pid_active
+    pid_active = data.get("active", False)
+    estado = "ACTIVADO" if pid_active else "DESACTIVADO"
+    logger.info(f"PID: {estado}")
+    web_ui.send_message("pid_status", {"active": pid_active})
+    
+    if not pid_active:
+        # Stop motors if deactivated
+        Bridge.call("detener")
+        web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
+
+
 # --- Register callbacks ---
 Bridge.provide("distancias", al_recibir_distancias)
 web_ui.on_message("joystick", on_joystick_move)
@@ -217,6 +240,7 @@ web_ui.on_message("girar", on_girar)
 web_ui.on_message("change_mode", on_change_mode)
 web_ui.on_message("toggle_recording", on_toggle_recording)
 web_ui.on_message("pid_params", on_pid_params)
+web_ui.on_message("toggle_pid", on_toggle_pid)
 
 
 @web_ui.on_connect

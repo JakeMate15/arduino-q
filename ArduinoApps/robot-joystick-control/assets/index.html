@@ -46,7 +46,16 @@
 
             <!-- PID Parameters (hidden by default) -->
             <div id="pid-params-section" class="card pid-params-section" style="display: none;">
-                <h2>Parámetros PID</h2>
+                <div class="pid-header">
+                    <h2>Parámetros PID</h2>
+                    <div class="pid-switch-container">
+                        <label class="switch">
+                            <input type="checkbox" id="pid-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span id="pid-status-label" class="pid-label">OFF</span>
+                    </div>
+                </div>
                 <div class="pid-controls">
                     <div class="pid-row">
                         <label>

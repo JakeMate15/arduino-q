@@ -205,6 +205,38 @@ main {
     border: 1px solid var(--pid-orange);
 }
 
+.pid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.pid-header h2 {
+    margin: 0 !important;
+}
+
+.pid-switch-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pid-label {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--pid-orange);
+    min-width: 35px;
+}
+
+.pid-switch-container .slider:before {
+    background-color: white;
+}
+
+.pid-switch-container input:checked + .slider {
+    background-color: var(--success-green);
+}
+
 .pid-controls {
     display: flex;
     flex-direction: column;
