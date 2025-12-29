@@ -14,21 +14,41 @@ web_ui = WebUI()
 camera_stream = VideoObjectDetection()
 
 # --- Configuración de IA (Piloto Automático) ---
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'cerebro_robot.pkl')
-SCALER_PATH = os.path.join(os.path.dirname(__file__), 'escalador.pkl')
+DIR_PYTHON = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(DIR_PYTHON, 'cerebro_robot.pkl')
+SCALER_PATH = os.path.join(DIR_PYTHON, 'escalador.pkl')
 modelo = None
 escalador = None
 piloto_automatico = False
 
+# Logging detallado para depuración
+logger.info(f"Buscando modelo IA en: {DIR_PYTHON}")
+logger.info(f"Ruta modelo: {MODEL_PATH}")
+logger.info(f"Ruta escalador: {SCALER_PATH}")
+logger.info(f"Modelo existe: {os.path.exists(MODEL_PATH)}")
+logger.info(f"Escalador existe: {os.path.exists(SCALER_PATH)}")
+
 if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
     try:
+        logger.info("Intentando cargar modelo y escalador...")
         modelo = joblib.load(MODEL_PATH)
         escalador = joblib.load(SCALER_PATH)
-        logger.info("Modelo y escalador IA cargados correctamente.")
+        logger.info("✓ Modelo y escalador IA cargados correctamente.")
+        logger.info(f"Tipo de modelo: {type(modelo)}")
+    except ImportError as e:
+        logger.error(f"Error de importación al cargar modelo: {e}")
+        logger.error("Asegúrate de que joblib esté instalado: pip3 install --break-system-packages joblib")
     except Exception as e:
-        logger.warning(f"Error cargando el modelo IA: {e}")
+        logger.error(f"Error cargando el modelo IA: {e}")
+        logger.error(f"Tipo de error: {type(e).__name__}")
+        import traceback
+        logger.error(traceback.format_exc())
 else:
-    logger.warning("No se encontraron los archivos del modelo IA (.pkl). El piloto automático no estará disponible.")
+    if not os.path.exists(MODEL_PATH):
+        logger.warning(f"✗ Archivo modelo no encontrado: {MODEL_PATH}")
+    if not os.path.exists(SCALER_PATH):
+        logger.warning(f"✗ Archivo escalador no encontrado: {SCALER_PATH}")
+    logger.warning("El piloto automático no estará disponible hasta que los archivos .pkl estén presentes.")
 
 # --- Configuración de Grabación ---
 DIR_DATOS = os.path.dirname(os.path.abspath(__file__))
@@ -175,20 +195,31 @@ def on_toggle_recording(sid, data):
 
 def on_toggle_autopilot(sid, data):
     global piloto_automatico, modelo, escalador
-    if not modelo or not escalador:
-        web_ui.send_message("status", {"message": "Error: Modelo IA no disponible"})
-        return
     
     piloto_automatico = data.get("active", False)
-    estado = "ACTIVADO" if piloto_automatico else "DESACTIVADO"
-    logger.info(f"Piloto Automático: {estado}")
-    web_ui.send_message("status", {"message": f"Piloto Automático {estado}"})
     
-    # Si se desactiva, detener motores por seguridad
-    if not piloto_automatico:
+    if piloto_automatico:
+        # Verificar disponibilidad antes de activar
+        if not modelo or not escalador:
+            logger.error("Intento de activar piloto automático sin modelo disponible")
+            logger.error(f"Modelo cargado: {modelo is not None}, Escalador cargado: {escalador is not None}")
+            web_ui.send_message("status", {
+                "message": f"Error: Modelo IA no disponible. Verifica que cerebro_robot.pkl y escalador.pkl estén en {DIR_PYTHON}"
+            })
+            piloto_automatico = False  # Forzar desactivación
+            return
+        
+        logger.info("Piloto Automático: ACTIVADO")
+        web_ui.send_message("status", {"message": "Piloto Automático ACTIVADO"})
+    else:
+        logger.info("Piloto Automático: DESACTIVADO")
+        web_ui.send_message("status", {"message": "Piloto Automático DESACTIVADO"})
+        
+        # Si se desactiva, detener motores por seguridad
         try:
             Bridge.call("detener")
-        except: pass
+        except Exception as e:
+            logger.warning(f"Error al detener motores: {e}")
 
 # Registrar callbacks
 Bridge.provide("distancias", al_recibir_distancias)
