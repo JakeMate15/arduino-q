@@ -5,7 +5,6 @@ Orchestrates controllers (Manual, PID, IA) and handles WebSocket communication.
 import os
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
-from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
 from controllers import ManualController, PIDController, IAController
 from utils import Recorder
@@ -13,9 +12,6 @@ from utils import Recorder
 # --- Initialization ---
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
-
-# Start video stream (provides stream on port 4912)
-camera_stream = VideoObjectDetection()
 
 # --- Paths ---
 DIR_PYTHON = os.path.dirname(os.path.abspath(__file__))

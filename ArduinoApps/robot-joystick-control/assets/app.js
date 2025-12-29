@@ -322,29 +322,3 @@ socket.on('ia_available', (data) => {
     modeIa.disabled = !iaAvailable;
     modeIa.title = iaAvailable ? 'Modo IA (XGBoost)' : 'Modelo IA no disponible - Entrena primero';
 });
-
-// --- Camera ---
-const iframe = document.getElementById('dynamicIframe');
-const placeholder = document.getElementById('videoPlaceholder');
-const currentHostname = window.location.hostname;
-const targetPort = 4912;
-const targetPath = '/embed';
-const streamUrl = `http://${currentHostname}:${targetPort}${targetPath}`;
-
-let cameraIntervalId;
-
-iframe.onload = () => {
-    if (cameraIntervalId) {
-        clearInterval(cameraIntervalId);
-    }
-    placeholder.style.display = 'none';
-    iframe.style.display = 'block';
-};
-
-const startLoadingCamera = () => {
-    if (iframe.style.display === 'none') {
-        iframe.src = streamUrl;
-    }
-};
-
-cameraIntervalId = setInterval(startLoadingCamera, 2000);
