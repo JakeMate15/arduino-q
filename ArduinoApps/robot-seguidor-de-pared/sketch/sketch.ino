@@ -61,6 +61,11 @@ void rotarDer(int pwm){
   motores(pwm, -pwm);
 }
 
+void esperaParado(int ms){
+  detener();
+  delay(ms);
+}
+
 // === ULTRASÓNICOS ===
 #define TRIG_DER 10
 #define ECHO_DER 11
@@ -114,38 +119,69 @@ float distanciaCM_mediana(int trig, int echo) {
   return median3(a, b, c);
 }
 
-void setup() {
-  Bridge.begin();
+// void setup() {
+//   Bridge.begin();
 
-  // Sensores
-  pinMode(TRIG_CENTRO, OUTPUT);
-  pinMode(ECHO_CENTRO, INPUT);
-  pinMode(TRIG_DER, OUTPUT);
-  pinMode(ECHO_DER, INPUT);
+//   // Sensores
+//   pinMode(TRIG_CENTRO, OUTPUT);
+//   pinMode(ECHO_CENTRO, INPUT);
+//   pinMode(TRIG_DER, OUTPUT);
+//   pinMode(ECHO_DER, INPUT);
 
-  // Motores
-  pinMode(DIR_A, OUTPUT);
-  pinMode(DIR_B, OUTPUT);
+//   // Motores
+//   pinMode(DIR_A, OUTPUT);
+//   pinMode(DIR_B, OUTPUT);
 
-  // Test rápido de motores al arrancar
-  motores(150, 150);
-  delay(200);
-  detener();
+//   // Test rápido de motores al arrancar
+//   motores(150, 150);
+//   delay(200);
+//   detener();
 
-  detener();
-}
+//   detener();
+// }
 
+// void loop() {
+//   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
+//   delay(50); // evita interferencia
+//   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
+
+//   // Notificar a Python
+//   Bridge.notify("distancias", dC, dR);
+
+//   if (dC < 25) detener();
+//   else adelante(180);
+
+//   delay(50); // ~10 Hz
+// }
 void loop() {
-  float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
-  delay(50); // evita interferencia
-  float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
+  // 1) Adelante
+  adelante(150);
+  delay(1000);
+  esperaParado(400);
 
-  // Notificar a Python
-  Bridge.notify("distancias", dC, dR);
+  // 2) Atrás
+  atras(150);
+  delay(800);
+  esperaParado(400);
 
-  if (dC < 25) detener();
-  else adelante(180);
+  // 3) Curva izquierda (arco)
+  // base = velocidad promedio, delta = cuánto gira
+  curvaIzq(150, 50);
+  delay(1200);
+  esperaParado(400);
 
-  delay(50); // ~10 Hz
+  // 4) Curva derecha (arco)
+  curvaDer(150, 50);
+  delay(1200);
+  esperaParado(400);
+
+  // 5) Rotar izquierda (en el lugar)
+  rotarIzq(120);
+  delay(800);
+  esperaParado(500);
+
+  // 6) Rotar derecha (en el lugar)
+  rotarDer(120);
+  delay(800);
+  esperaParado(800);
 }
-
