@@ -67,7 +67,7 @@ def on_joystick_move(sid, data):
     y = data.get("y", 0)
     
     # Límite de PWM configurado en Arduino
-    MAX_PWM_LIMIT = 150
+    MAX_PWM_LIMIT = 255
     
     # Escalar los valores del joystick (-255 a 255) al rango limitado
     def scale(val):
@@ -102,7 +102,7 @@ def on_girar(sid, data):
     accion = data.get("action") # "start" o "stop"
     
     # Límite de PWM configurado en Arduino
-    MAX_PWM_LIMIT = 150
+    MAX_PWM_LIMIT = 255
     
     try:
         if accion == "stop":

@@ -11,7 +11,7 @@ const uint32_t off[] = { 0, 0, 0 };
 #define DIR_B 4 
 #define PWM_B 6
 const bool MOTOR_B_INVERTIDO = true;
-const int MAX_PWM_LIMIT = 150; // Límite de velocidad solicitado
+const int MAX_PWM_LIMIT = 255; // Límite de velocidad máximo
 
 // === ULTRASÓNICOS ===
 #define TRIG_DER 10
