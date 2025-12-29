@@ -40,6 +40,10 @@ const pidKp = document.getElementById('pid-kp');
 const pidKi = document.getElementById('pid-ki');
 const pidKd = document.getElementById('pid-kd');
 const pidApply = document.getElementById('pid-apply');
+const pidAutotuneBtn = document.getElementById('pid-autotune');
+const autotuneContainer = document.getElementById('autotune-container');
+const autotuneBar = document.getElementById('autotune-bar');
+const autotunePercent = document.getElementById('autotune-percent');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
@@ -106,6 +110,14 @@ pidApply.addEventListener('click', () => {
         ki: parseFloat(pidKi.value),
         kd: parseFloat(pidKd.value)
     });
+});
+
+// PID Autotune Button
+pidAutotuneBtn.addEventListener('click', () => {
+    setMode('autotune');
+    autotuneContainer.style.display = 'block';
+    autotuneBar.style.width = '0%';
+    autotunePercent.textContent = '0%';
 });
 
 // PID Activation Toggle
@@ -315,6 +327,19 @@ socket.on('pid_params', (data) => {
     if (data.kp !== undefined) pidKp.value = data.kp;
     if (data.ki !== undefined) pidKi.value = data.ki;
     if (data.kd !== undefined) pidKd.value = data.kd;
+});
+
+socket.on('autotune_progress', (data) => {
+    const percent = Math.round(data.progress * 100) + '%';
+    autotuneBar.style.width = percent;
+    autotunePercent.textContent = percent;
+    
+    if (data.finished) {
+        setTimeout(() => {
+            autotuneContainer.style.display = 'none';
+            // Results will be updated via the 'pid_params' event which follows
+        }, 2000);
+    }
 });
 
 socket.on('ia_available', (data) => {

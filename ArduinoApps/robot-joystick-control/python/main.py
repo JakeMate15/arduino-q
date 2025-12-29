@@ -3,10 +3,11 @@ Robot Joystick Control - Main Application
 Orchestrates controllers (Manual, PID, IA) and handles WebSocket communication.
 """
 import os
+import json
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
 
-from controllers import ManualController, PIDController, IAController
+from controllers import ManualController, PIDController, IAController, AutotuneController
 from utils import Recorder
 
 # --- Initialization ---
@@ -16,12 +17,36 @@ web_ui = WebUI()
 # --- Paths ---
 DIR_PYTHON = os.path.dirname(os.path.abspath(__file__))
 DIR_DATA = os.path.join(DIR_PYTHON, 'data')
+PID_CONFIG_PATH = os.path.join(DIR_DATA, 'pid_config.json')
+
+# --- Helper: Load/Save PID Config ---
+def load_pid_config():
+    if os.path.exists(PID_CONFIG_PATH):
+        try:
+            with open(PID_CONFIG_PATH, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return None
+    return None
+
+def save_pid_config(params):
+    try:
+        with open(PID_CONFIG_PATH, 'w') as f:
+            json.dump(params, f, indent=4)
+    except Exception as e:
+        logger.warning(f"Error guardando PID config: {e}")
+
+# Load initial config
+initial_pid_params = load_pid_config() or {
+    "setpoint": 15.0, "kp": 2.0, "ki": 0.1, "kd": 0.5, "base_speed": 100
+}
 
 # --- Controllers ---
 controllers = {
     "manual": ManualController(),
-    "pid": PIDController(setpoint=15, kp=2.0, ki=0.1, kd=0.5, base_speed=100),
-    "ia": IAController(data_dir=DIR_DATA)
+    "pid": PIDController(**initial_pid_params),
+    "ia": IAController(data_dir=DIR_DATA),
+    "autotune": AutotuneController(setpoint=initial_pid_params["setpoint"])
 }
 
 # Active mode and controller
@@ -105,7 +130,7 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
         logger.warning(f"Error enviando sensores al UI: {e}")
     
     # Process through active controller (only for autonomous modes)
-    if active_mode in ("pid", "ia"):
+    if active_mode in ("pid", "ia", "autotune"):
         # If in PID mode, only compute if active
         if active_mode == "pid" and not pid_active:
             return
@@ -122,6 +147,27 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
                 "izquierdo": pwm_izq,
                 "derecho": pwm_der
             })
+
+            # Check if autotune finished
+            if active_mode == "autotune":
+                results = active_controller.get_results()
+                web_ui.send_message("autotune_progress", results)
+                
+                if results["finished"]:
+                    # Update PID parameters
+                    controllers["pid"].set_parameters(
+                        kp=results["kp"],
+                        ki=results["ki"],
+                        kd=results["kd"]
+                    )
+                    # Save permanent config
+                    save_pid_config(controllers["pid"].get_parameters())
+                    
+                    logger.info(f"Auto-calibración completada: {results}")
+                    web_ui.send_message("status", {"message": "Auto-calibración COMPLETADA"})
+                    
+                    # Switch back to PID mode (but inactive)
+                    set_mode("pid")
         except Exception as e:
             logger.warning(f"Error en controlador {active_mode}: {e}")
     
@@ -211,6 +257,10 @@ def on_pid_params(sid, data):
         kd=data.get("kd"),
         base_speed=data.get("base_speed")
     )
+    # Update autotune setpoint too
+    controllers["autotune"].setpoint = pid.setpoint
+    
+    save_pid_config(pid.get_parameters())
     logger.info(f"PID params actualizados: {pid.get_parameters()}")
     web_ui.send_message("status", {"message": "Parámetros PID actualizados"})
 

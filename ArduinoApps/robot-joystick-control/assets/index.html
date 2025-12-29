@@ -82,6 +82,18 @@
                         </label>
                     </div>
                     <button id="pid-apply" class="btn-apply">Aplicar</button>
+                    <button id="pid-autotune" class="btn-autotune">Auto-Calibrar</button>
+                </div>
+                
+                <!-- Autotune Progress (hidden by default) -->
+                <div id="autotune-container" class="autotune-container" style="display: none;">
+                    <div class="autotune-info">
+                        <span>Calibrando... Mantén el robot cerca de la pared</span>
+                        <span id="autotune-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="autotune-bar" class="progress-fill"></div>
+                    </div>
                 </div>
             </div>
 
