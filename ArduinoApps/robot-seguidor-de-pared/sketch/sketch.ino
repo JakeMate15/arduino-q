@@ -132,60 +132,19 @@ void setup() {
   pinMode(DIR_A, OUTPUT);
   pinMode(DIR_B, OUTPUT);
 
-  // Test rápido de motores al arrancar
-  motores(150, 150);
-  delay(200);
-  detener();
-
+  // Registrar comando para que Python controle los motores
+  Bridge.provide("motores", motores);
   detener();
 }
 
-// void loop() {
-//   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
-//   delay(50); // evita interferencia
-//   float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
-
-//   // Notificar a Python
-//   Bridge.notify("distancias", dC, dR);
-
-//   if (dC < 25) detener();
-//   else adelante(180);
-
-//   delay(50); // ~10 Hz
-// }
 void loop() {
-  // // 1) Adelante
-  // adelante(150);
-  // delay(1000);
-  // esperaParado(400);
+  // 1. Medición de sensores
+  float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
+  float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
+  
+  // 2. Enviamos los datos a Python
+  Bridge.notify("distancias", dC, dR);
 
-  // // 2) Atrás
-  // atras(150);
-  // delay(800);
-  // esperaParado(400);
-
-  // // 3) Curva izquierda (arco)
-  // // base = velocidad promedio, delta = cuánto gira
-  // curvaIzq(150, 50);
-  // delay(1200);
-  // esperaParado(400);
-
-  // // 4) Curva derecha (arco)
-  // curvaDer(150, 50);
-  // delay(1200);
-  // esperaParado(400);
-
-  // // 5) Rotar izquierda (en el lugar)
-  // rotarIzq(120);
-  // delay(800);
-  // esperaParado(500);
-
-  // // 6) Rotar derecha (en el lugar)
-  // rotarDer(120);
-  // delay(800);
-  // esperaParado(800);
-
-  rotarDer(150);
-  delay(400);
-  esperaParado(800);
+  // Esperamos un poco para no saturar el Bridge
+  delay(20);
 }
