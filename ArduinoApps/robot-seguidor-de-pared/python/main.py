@@ -51,4 +51,5 @@ def loop():
     time.sleep(1)
 
 if __name__ == "__main__":
+    logger.info("\n\n\n\n\nIniciando App de Seguidor de Pared...")
     App.run(user_loop=loop)
