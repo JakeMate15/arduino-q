@@ -70,7 +70,7 @@ def set_mode(mode: str) -> bool:
     active_controller.on_deactivate()
     
     # Stop motors when switching modes
-    Bridge.call("detener")
+    Bridge.notify("detener")
     
     # Switch to new controller
     active_mode = mode
@@ -114,8 +114,8 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
             pwm_izq, pwm_der = active_controller.compute(d_frontal, d_derecho)
             ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
             
-            # Send to Arduino
-            Bridge.call("motores", pwm_izq, pwm_der)
+            # Send to Arduino (using notify to avoid timeouts at 50Hz)
+            Bridge.notify("motores", pwm_izq, pwm_der)
             
             # Update UI
             web_ui.send_message("motores", {
@@ -146,7 +146,7 @@ def on_joystick_move(sid, data):
     ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
     
     try:
-        Bridge.call("joystick", x, y)
+        Bridge.notify("joystick", x, y)
         web_ui.send_message("motores", {
             "izquierdo": pwm_izq,
             "derecho": pwm_der
@@ -172,11 +172,11 @@ def on_girar(sid, data):
     
     try:
         if accion == "stop":
-            Bridge.call("detener")
+            Bridge.notify("detener")
         elif direccion == "izq":
-            Bridge.call("girar_izq")
+            Bridge.notify("girar_izq")
         elif direccion == "der":
-            Bridge.call("girar_der")
+            Bridge.notify("girar_der")
         
         web_ui.send_message("motores", {
             "izquierdo": pwm_izq,
@@ -225,7 +225,7 @@ def on_toggle_pid(sid, data):
     
     if not pid_active:
         # Stop motors if deactivated
-        Bridge.call("detener")
+        Bridge.notify("detener")
         web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
 
 
