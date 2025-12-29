@@ -119,26 +119,26 @@ float distanciaCM_mediana(int trig, int echo) {
   return median3(a, b, c);
 }
 
-// void setup() {
-//   Bridge.begin();
+void setup() {
+  Bridge.begin();
 
-//   // Sensores
-//   pinMode(TRIG_CENTRO, OUTPUT);
-//   pinMode(ECHO_CENTRO, INPUT);
-//   pinMode(TRIG_DER, OUTPUT);
-//   pinMode(ECHO_DER, INPUT);
+  // Sensores
+  pinMode(TRIG_CENTRO, OUTPUT);
+  pinMode(ECHO_CENTRO, INPUT);
+  pinMode(TRIG_DER, OUTPUT);
+  pinMode(ECHO_DER, INPUT);
 
-//   // Motores
-//   pinMode(DIR_A, OUTPUT);
-//   pinMode(DIR_B, OUTPUT);
+  // Motores
+  pinMode(DIR_A, OUTPUT);
+  pinMode(DIR_B, OUTPUT);
 
-//   // Test rápido de motores al arrancar
-//   motores(150, 150);
-//   delay(200);
-//   detener();
+  // Test rápido de motores al arrancar
+  motores(150, 150);
+  delay(200);
+  detener();
 
-//   detener();
-// }
+  detener();
+}
 
 // void loop() {
 //   float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
