@@ -20,6 +20,58 @@ let controlState = {
     dir: null
 };
 
+// Control por Teclado
+const pressedKeys = new Set();
+
+document.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        pressedKeys.add(e.key);
+        updateControlFromKeyboard();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        pressedKeys.delete(e.key);
+        updateControlFromKeyboard();
+    }
+});
+
+function updateControlFromKeyboard() {
+    if (pressedKeys.size === 0) {
+        controlState.type = 'stop';
+        controlState.data = { x: 0, y: 0 };
+        return;
+    }
+
+    let x = 0;
+    let y = 0;
+
+    if (pressedKeys.has('ArrowUp')) y += 255;
+    if (pressedKeys.has('ArrowDown')) y -= 255;
+
+    // Si solo estamos presionando izquierda/derecha, usamos el modo 'turn' para giro sobre eje
+    if (pressedKeys.has('ArrowLeft') && !pressedKeys.has('ArrowUp') && !pressedKeys.has('ArrowDown')) {
+        controlState.type = 'turn';
+        controlState.dir = 'izq';
+        return;
+    }
+    if (pressedKeys.has('ArrowRight') && !pressedKeys.has('ArrowUp') && !pressedKeys.has('ArrowDown')) {
+        controlState.type = 'turn';
+        controlState.dir = 'der';
+        return;
+    }
+
+    // Si hay combinación (ej: Arriba + Izquierda), usamos modo joystick para giro suave
+    if (pressedKeys.has('ArrowLeft')) x -= 255;
+    if (pressedKeys.has('ArrowRight')) x += 255;
+
+    controlState.type = 'joystick';
+    controlState.data = { x, y };
+}
+
 // Ciclo de envío constante (Heartbeat para el Watchdog)
 setInterval(() => {
     if (controlState.type === 'joystick') {
