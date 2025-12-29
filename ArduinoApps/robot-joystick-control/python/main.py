@@ -60,6 +60,7 @@ recorder = Recorder(data_dir=DIR_DATA)
 ultimo_pwm_izq = 0
 ultimo_pwm_der = 0
 pid_active = False  # New state for PID activation
+ciclos_ui = 0       # Counter to throttle UI updates
 
 # Log startup info
 logger.info(f"Directorio de datos: {DIR_DATA}")
@@ -118,18 +119,24 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
     Callback for sensor data from Arduino.
     Processes data through active controller and sends commands.
     """
-    global ultimo_pwm_izq, ultimo_pwm_der, pid_active
+    global ultimo_pwm_izq, ultimo_pwm_der, pid_active, ciclos_ui
     
-    # Send sensor data to UI
-    try:
-        web_ui.send_message("sensores", {
-            "frontal": round(d_frontal, 1),
-            "derecho": round(d_derecho, 1)
-        })
-    except Exception as e:
-        logger.warning(f"Error enviando sensores al UI: {e}")
+    # Throttle UI updates: Only send every 5th message (~10Hz if input is 50Hz)
+    ciclos_ui += 1
+    update_ui = (ciclos_ui % 5 == 0)
+
+    # Send sensor data to UI (throttled)
+    if update_ui:
+        try:
+            web_ui.send_message("sensores", {
+                "frontal": round(d_frontal, 1),
+                "derecho": round(d_derecho, 1)
+            })
+        except Exception as e:
+            logger.warning(f"Error enviando sensores al UI: {e}")
     
     # Process through active controller (only for autonomous modes)
+    # This remains at full speed (50Hz) for precision
     if active_mode in ("pid", "ia", "autotune"):
         # If in PID mode, only compute if active
         if active_mode == "pid" and not pid_active:
@@ -142,39 +149,40 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
             # Send to Arduino (using notify to avoid timeouts at 50Hz)
             Bridge.notify("motores", pwm_izq, pwm_der)
             
-            # Update UI
-            web_ui.send_message("motores", {
-                "izquierdo": pwm_izq,
-                "derecho": pwm_der
-            })
+            # Update UI (throttled)
+            if update_ui:
+                web_ui.send_message("motores", {
+                    "izquierdo": pwm_izq,
+                    "derecho": pwm_der
+                })
 
-            # Send PID diagnostics if in PID mode
-            if active_mode == "pid":
-                web_ui.send_message("pid_diag", controllers["pid"].last_diagnostics)
+                # Send PID diagnostics if in PID mode
+                if active_mode == "pid":
+                    web_ui.send_message("pid_diag", controllers["pid"].last_diagnostics)
 
-            # Check if autotune finished
-            if active_mode == "autotune":
-                results = active_controller.get_results()
-                web_ui.send_message("autotune_progress", results)
-                
-                if results["finished"]:
-                    # Update PID parameters
-                    controllers["pid"].set_parameters(
-                        kp=results["kp"],
-                        ki=results["ki"],
-                        kd=results["kd"]
-                    )
-                    # Save permanent config
-                    save_pid_config(controllers["pid"].get_parameters())
+                # Check if autotune finished
+                if active_mode == "autotune":
+                    results = active_controller.get_results()
+                    web_ui.send_message("autotune_progress", results)
                     
-                    # Send new params to UI immediately
-                    web_ui.send_message("pid_params", controllers["pid"].get_parameters())
-                    
-                    logger.info(f"Auto-calibración completada: {results}")
-                    web_ui.send_message("status", {"message": "Auto-calibración COMPLETADA"})
-                    
-                    # Switch back to PID mode (but inactive)
-                    set_mode("pid")
+                    if results["finished"]:
+                        # Update PID parameters
+                        controllers["pid"].set_parameters(
+                            kp=results["kp"],
+                            ki=results["ki"],
+                            kd=results["kd"]
+                        )
+                        # Save permanent config
+                        save_pid_config(controllers["pid"].get_parameters())
+                        
+                        # Send new params to UI immediately
+                        web_ui.send_message("pid_params", controllers["pid"].get_parameters())
+                        
+                        logger.info(f"Auto-calibración completada: {results}")
+                        web_ui.send_message("status", {"message": "Auto-calibración COMPLETADA"})
+                        
+                        # Switch back to PID mode (but inactive)
+                        set_mode("pid")
         except Exception as e:
             logger.warning(f"Error en controlador {active_mode}: {e}")
     
