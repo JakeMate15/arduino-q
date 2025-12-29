@@ -154,34 +154,38 @@ void setup() {
 //   delay(50); // ~10 Hz
 // }
 void loop() {
-  // 1) Adelante
-  adelante(150);
-  delay(1000);
-  esperaParado(400);
+  // // 1) Adelante
+  // adelante(150);
+  // delay(1000);
+  // esperaParado(400);
 
-  // 2) Atrás
-  atras(150);
-  delay(800);
-  esperaParado(400);
+  // // 2) Atrás
+  // atras(150);
+  // delay(800);
+  // esperaParado(400);
 
-  // 3) Curva izquierda (arco)
-  // base = velocidad promedio, delta = cuánto gira
-  curvaIzq(150, 50);
-  delay(1200);
-  esperaParado(400);
+  // // 3) Curva izquierda (arco)
+  // // base = velocidad promedio, delta = cuánto gira
+  // curvaIzq(150, 50);
+  // delay(1200);
+  // esperaParado(400);
 
-  // 4) Curva derecha (arco)
-  curvaDer(150, 50);
-  delay(1200);
-  esperaParado(400);
+  // // 4) Curva derecha (arco)
+  // curvaDer(150, 50);
+  // delay(1200);
+  // esperaParado(400);
 
-  // 5) Rotar izquierda (en el lugar)
-  rotarIzq(120);
-  delay(800);
-  esperaParado(500);
+  // // 5) Rotar izquierda (en el lugar)
+  // rotarIzq(120);
+  // delay(800);
+  // esperaParado(500);
 
-  // 6) Rotar derecha (en el lugar)
-  rotarDer(120);
-  delay(800);
+  // // 6) Rotar derecha (en el lugar)
+  // rotarDer(120);
+  // delay(800);
+  // esperaParado(800);
+
+  rotarDer(150);
+  delay(1600);
   esperaParado(800);
 }
