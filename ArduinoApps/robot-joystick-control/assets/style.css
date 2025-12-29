@@ -9,145 +9,176 @@
     --success-green: #2ecc71;
     --pid-orange: #f39c12;
     --ia-purple: #9b59b6;
+    --header-height: 60px;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
-    align-items: center;
     min-height: 100vh;
 }
 
 .app-container {
-    width: 95%;
-    max-width: 500px;
+    width: 100%;
+    max-width: 900px; /* Increased for desktop side-by-side view if needed */
     background-color: var(--card-bg);
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    overflow: hidden;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
 }
 
 header {
     background-color: var(--arduino-teal);
     color: white;
-    padding: 15px 20px;
+    padding: 10px 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-height);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .header-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
-/* Switch de grabación */
+#connection-status {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-connected { background-color: var(--success-green); }
+.status-disconnected { background-color: var(--error-red); }
+
 .recording-switch {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
 }
 
 .rec-label {
     font-weight: bold;
-    font-size: 0.8rem;
-    color: #fff;
+    font-size: 0.75rem;
 }
 
+/* Switch Styles */
 .switch {
     position: relative;
     display: inline-block;
-    width: 40px;
-    height: 20px;
+    width: 34px;
+    height: 18px;
 }
 
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
+.switch input { opacity: 0; width: 0; height: 0; }
 
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255,255,255,0.3);
     transition: .4s;
+    border-radius: 18px;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 14px;
-    width: 14px;
+    height: 12px;
+    width: 12px;
     left: 3px;
     bottom: 3px;
     background-color: white;
     transition: .4s;
-}
-
-input:checked + .slider {
-    background-color: var(--error-red);
-}
-
-input:checked + .slider:before {
-    transform: translateX(20px);
-}
-
-.slider.round {
-    border-radius: 20px;
-}
-
-.slider.round:before {
     border-radius: 50%;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-#connection-status {
-    font-size: 0.8rem;
-    padding: 5px 10px;
-    border-radius: 20px;
-}
-
-.status-connected {
-    background-color: var(--success-green);
-}
-
-.status-disconnected {
-    background-color: var(--error-red);
-}
+input:checked + .slider { background-color: var(--error-red); }
+input:checked + .slider:before { transform: translateX(16px); }
 
 main {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    flex: 1;
+}
+
+/* Main Grid Layout for Desktop */
+@media (min-width: 768px) {
+    main {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
+        align-items: start;
+    }
+    
+    .camera-section {
+        grid-column: 1 / 2;
+        grid-row: 1 / 3;
+    }
+    
+    .mode-section {
+        grid-column: 2 / 3;
+    }
+    
+    .telemetry-section {
+        grid-column: 2 / 3;
+    }
+
+    .joystick-section {
+        grid-column: 1 / 3;
+    }
+    
+    .pid-params-section {
+        grid-column: 1 / 3;
+    }
+}
+
+.card {
+    background-color: var(--arduino-light);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 135, 143, 0.1);
+    height: 100%;
+}
+
+.card h2 {
+    margin: 0 0 10px 0;
+    font-size: 0.8rem;
+    color: var(--arduino-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Mode Selector */
-.mode-section {
-    padding: 15px;
-}
-
 .mode-selector {
     display: flex;
-    gap: 10px;
-    justify-content: center;
+    gap: 8px;
 }
 
 .mode-btn {
@@ -155,49 +186,21 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 8px;
+    padding: 10px 5px;
     border: 2px solid #ddd;
     border-radius: 10px;
     background-color: white;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
 }
 
-.mode-btn:hover:not(:disabled) {
-    border-color: var(--arduino-teal);
-    transform: translateY(-2px);
-}
+.mode-btn.active { border-color: var(--arduino-teal); background-color: var(--arduino-light); }
+.mode-btn[data-mode="pid"].active { border-color: var(--pid-orange); background-color: #fef5e7; }
+.mode-btn[data-mode="ia"].active { border-color: var(--ia-purple); background-color: #f4ecf7; }
+.mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.mode-btn.active {
-    border-color: var(--arduino-teal);
-    background-color: var(--arduino-light);
-}
-
-.mode-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.mode-btn[data-mode="pid"].active {
-    border-color: var(--pid-orange);
-    background-color: #fef5e7;
-}
-
-.mode-btn[data-mode="ia"].active {
-    border-color: var(--ia-purple);
-    background-color: #f4ecf7;
-}
-
-.mode-icon {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
-}
-
-.mode-name {
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: var(--text-color);
-}
+.mode-icon { font-size: 1.2rem; margin-bottom: 2px; }
+.mode-name { font-size: 0.7rem; font-weight: bold; }
 
 /* PID Parameters */
 .pid-params-section {
@@ -209,167 +212,77 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-}
-
-.pid-header h2 {
-    margin: 0 !important;
+    margin-bottom: 10px;
 }
 
 .pid-switch-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-.pid-label {
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: var(--pid-orange);
-    min-width: 35px;
-}
-
-.pid-switch-container .slider:before {
-    background-color: white;
-}
-
-.pid-switch-container input:checked + .slider {
-    background-color: var(--success-green);
-}
+.pid-label { font-weight: bold; font-size: 0.8rem; color: var(--pid-orange); }
 
 .pid-controls {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .pid-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
 }
 
 .pid-row label {
     flex: 1;
+    min-width: 80px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
-.pid-row label span {
-    font-size: 0.75rem;
-    color: #666;
-}
-
+.pid-row label span { font-size: 0.65rem; color: #666; }
 .pid-row input {
-    padding: 8px;
+    padding: 6px;
     border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-    text-align: center;
-}
-
-.pid-row input:focus {
-    outline: none;
-    border-color: var(--pid-orange);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    width: 100%;
 }
 
 .btn-apply {
-    padding: 10px 20px;
+    padding: 8px;
     background-color: var(--pid-orange);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
-.btn-apply:hover {
-    background-color: #e67e22;
-}
-
-/* Auto mode indicator */
-.auto-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 30px;
-    background: linear-gradient(135deg, var(--arduino-light), #d4efdf);
-    border-radius: 10px;
-    font-weight: bold;
-    color: var(--arduino-blue);
-}
-
-.auto-pulse {
-    width: 12px;
-    height: 12px;
-    background-color: var(--success-green);
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
-    }
-}
-
-.telemetry-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-.camera-section {
-    padding: 10px;
-    background-color: var(--card-bg);
-}
-
+/* Camera Section */
 #videoFeedContainer {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
     background-color: #000;
     border-radius: 8px;
     position: relative;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.camera-status {
-    color: white;
-    text-align: center;
 }
 
 #dynamicIframe {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
+    border: none;
 }
 
-.card {
-    background-color: var(--arduino-light);
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid rgba(0, 135, 143, 0.1);
-}
-
-.card h2 {
-    margin: 0 0 10px 0;
-    font-size: 0.9rem;
-    color: var(--arduino-blue);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+/* Telemetry */
+.telemetry-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 .motor-displays, .sensor-displays {
@@ -377,94 +290,96 @@ main {
     justify-content: space-around;
 }
 
-.motor-item, .sensor-item {
-    text-align: center;
-}
+.label { font-size: 0.6rem; color: #666; margin-bottom: 2px; display: block; }
+.value { font-size: 1.1rem; font-weight: bold; color: var(--arduino-teal); }
 
-.label {
-    display: block;
-    font-size: 0.7rem;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.value {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--arduino-teal);
-}
-
+/* Joystick Section */
 .joystick-section {
-    background-color: #eee;
-    height: 320px;
-    border-radius: 10px;
-    position: relative;
+    background-color: #f0f0f0;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding-bottom: 20px;
+    padding: 15px;
+    min-height: 280px;
 }
 
 #joystick-zone {
     width: 100%;
-    height: 220px;
+    height: 180px;
     position: relative;
 }
 
 .turn-buttons {
     display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    z-index: 10;
+    gap: 15px;
+    margin-top: 10px;
 }
 
 .btn-turn {
-    padding: 15px 25px;
-    font-size: 1rem;
+    padding: 12px 20px;
+    font-size: 0.9rem;
     font-weight: bold;
     color: white;
     background-color: var(--arduino-teal);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
-    touch-action: manipulation;
-    user-select: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.btn-turn:active {
-    background-color: var(--arduino-blue);
-    transform: translateY(2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.hint { margin-top: 10px; font-size: 0.7rem; color: #888; }
+
+/* Auto Indicator */
+.auto-indicator {
+    padding: 15px;
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: bold;
+    color: var(--arduino-blue);
+    font-size: 0.9rem;
 }
 
-.hint {
-    position: absolute;
-    bottom: 10px;
-    font-size: 0.8rem;
-    color: #999;
-    margin: 0;
+.auto-pulse {
+    width: 10px;
+    height: 10px;
+    background-color: var(--success-green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(46, 204, 113, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
 }
 
 .error-message {
     background-color: var(--error-red);
     color: white;
-    padding: 10px;
+    padding: 8px;
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
-@media (max-width: 400px) {
+/* Accessibility & Utility */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Tablet and larger tweaks */
+@media (max-width: 600px) {
     .telemetry-section {
         grid-template-columns: 1fr;
-    }
-    
-    .mode-selector {
-        flex-direction: column;
-    }
-    
-    .pid-row {
-        flex-direction: column;
     }
 }

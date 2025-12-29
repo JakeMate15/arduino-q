@@ -190,12 +190,16 @@ recToggle.addEventListener('change', (e) => {
 
 // --- Joystick (nipplejs) ---
 const joystickZone = document.getElementById('joystick-zone');
+
+// Adapt joystick size for small screens
+const joystickSize = window.innerWidth < 400 ? 120 : 150;
+
 const joystick = nipplejs.create({
     zone: joystickZone,
     mode: 'static',
     position: { left: '50%', top: '50%' },
     color: '#00878F',
-    size: 150
+    size: joystickSize
 });
 
 joystick.on('move', (evt, data) => {
