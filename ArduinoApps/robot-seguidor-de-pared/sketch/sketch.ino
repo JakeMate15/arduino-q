@@ -2,8 +2,8 @@
 
 // === MOTORES ===
 #define DIRA 2
-#define DIRB 5
-#define PWMA 4
+#define PWMA 5
+#define DIRB 4
 #define PWMB 6
 
 const bool INV_A = false;
