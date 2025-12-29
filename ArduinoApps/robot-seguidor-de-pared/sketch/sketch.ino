@@ -1,7 +1,5 @@
 #include <Arduino_RouterBridge.h>
 
-Arduino_LED_Matrix matrix;
-
 // === MOTORES ===
 #define DIR_A 2 
 #define PWM_A 5
