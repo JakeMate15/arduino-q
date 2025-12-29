@@ -84,6 +84,25 @@
                     <button id="pid-apply" class="btn-apply">Aplicar</button>
                     <button id="pid-autotune" class="btn-autotune">Auto-Calibrar</button>
                 </div>
+
+                <!-- PID Diagnostics -->
+                <div id="pid-diag-container" class="pid-diag-container" style="display: none;">
+                    <div class="diag-row">
+                        <div class="diag-item">
+                            <span class="diag-label">Error</span>
+                            <span id="diag-error" class="diag-value">0.0</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Corrección</span>
+                            <span id="diag-corr" class="diag-value">0.0</span>
+                        </div>
+                    </div>
+                    <div class="diag-row-compact">
+                        <div class="diag-mini">P: <span id="diag-p">0</span></div>
+                        <div class="diag-mini">I: <span id="diag-i">0</span></div>
+                        <div class="diag-mini">D: <span id="diag-d">0</span></div>
+                    </div>
+                </div>
                 
                 <!-- Autotune Progress (hidden by default) -->
                 <div id="autotune-container" class="autotune-container" style="display: none;">

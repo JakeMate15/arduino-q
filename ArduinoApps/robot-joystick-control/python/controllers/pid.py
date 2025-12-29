@@ -49,6 +49,15 @@ class PIDController(BaseController):
         
         # Minimum front distance for obstacle avoidance
         self.min_front_distance = 15.0
+        
+        # Diagnostics
+        self.last_diagnostics = {
+            "error": 0.0,
+            "p_term": 0.0,
+            "i_term": 0.0,
+            "d_term": 0.0,
+            "correction": 0.0
+        }
     
     def compute(self, dist_frontal: float, dist_derecho: float) -> Tuple[int, int]:
         """
@@ -99,6 +108,15 @@ class PIDController(BaseController):
         
         # Total correction
         correction = p_term + i_term + d_term
+        
+        # Store diagnostics for UI
+        self.last_diagnostics = {
+            "error": round(error, 2),
+            "p_term": round(p_term, 2),
+            "i_term": round(i_term, 2),
+            "d_term": round(d_term, 2),
+            "correction": round(correction, 2)
+        }
         
         # Base speed adjustment for front obstacle
         effective_speed = self.base_speed

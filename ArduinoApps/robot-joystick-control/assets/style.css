@@ -278,6 +278,53 @@ main {
     background-color: #004d51;
 }
 
+/* PID Diagnostics */
+.pid-diag-container {
+    margin-top: 15px;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--pid-orange);
+}
+
+.diag-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 8px;
+}
+
+.diag-item {
+    text-align: center;
+}
+
+.diag-label {
+    display: block;
+    font-size: 0.6rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.diag-value {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--arduino-blue);
+}
+
+.diag-row-compact {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 5px;
+    font-size: 0.7rem;
+    font-family: 'Courier New', Courier, monospace;
+    color: #555;
+}
+
+.diag-mini span {
+    font-weight: bold;
+}
+
 /* Autotune Progress */
 .autotune-container {
     margin-top: 15px;

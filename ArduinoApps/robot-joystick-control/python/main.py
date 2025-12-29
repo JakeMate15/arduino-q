@@ -148,6 +148,10 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
                 "derecho": pwm_der
             })
 
+            # Send PID diagnostics if in PID mode
+            if active_mode == "pid":
+                web_ui.send_message("pid_diag", controllers["pid"].last_diagnostics)
+
             # Check if autotune finished
             if active_mode == "autotune":
                 results = active_controller.get_results()

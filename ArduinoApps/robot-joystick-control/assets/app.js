@@ -44,6 +44,12 @@ const pidAutotuneBtn = document.getElementById('pid-autotune');
 const autotuneContainer = document.getElementById('autotune-container');
 const autotuneBar = document.getElementById('autotune-bar');
 const autotunePercent = document.getElementById('autotune-percent');
+const pidDiagContainer = document.getElementById('pid-diag-container');
+const diagError = document.getElementById('diag-error');
+const diagCorr = document.getElementById('diag-corr');
+const diagP = document.getElementById('diag-p');
+const diagI = document.getElementById('diag-i');
+const diagD = document.getElementById('diag-d');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
@@ -79,10 +85,12 @@ function setMode(mode) {
         joystickSection.style.display = 'flex';
         autoIndicator.style.display = 'none';
         pidParamsSection.style.display = 'none';
+        pidDiagContainer.style.display = 'none';
     } else {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
         pidParamsSection.style.display = mode === 'pid' ? 'block' : 'none';
+        pidDiagContainer.style.display = mode === 'pid' ? 'block' : 'none';
         
         // Always ensure PID is toggled OFF when switching modes for safety
         if (pidToggle) {
@@ -300,6 +308,23 @@ socket.on('motores', (data) => {
 
 socket.on('status', (data) => {
     console.log('Server status:', data.message);
+});
+
+socket.on('pid_diag', (data) => {
+    if (diagError) diagError.textContent = data.error;
+    if (diagCorr) diagCorr.textContent = data.correction;
+    if (diagP) diagP.textContent = data.p_term;
+    if (diagI) diagI.textContent = data.i_term;
+    if (diagD) diagD.textContent = data.d_term;
+    
+    // Cambiar color del error dinámicamente
+    if (Math.abs(data.error) < 1.0) {
+        diagError.style.color = 'var(--success-green)';
+    } else if (Math.abs(data.error) > 5.0) {
+        diagError.style.color = 'var(--error-red)';
+    } else {
+        diagError.style.color = 'var(--arduino-blue)';
+    }
 });
 
 socket.on('mode_changed', (data) => {
