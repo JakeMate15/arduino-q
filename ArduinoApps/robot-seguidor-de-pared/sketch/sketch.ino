@@ -62,10 +62,10 @@ void setup() {
 }
 
 void loop() {
-  float dC = distanciaCM(TRIG_CENTRO, ECHO_CENTRO);
-  float dR = distanciaCM(TRIG_DER, ECHO_DER);
-
+  float dC = distanciaCM_mediana(TRIG_CENTRO, ECHO_CENTRO);
+  delay(50);
+  float dR = distanciaCM_mediana(TRIG_DER, ECHO_DER);
   Bridge.notify("distancias", dC, dR);
 
-  delay(20);
+  delay(80);
 }
