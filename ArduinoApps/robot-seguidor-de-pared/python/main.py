@@ -1,7 +1,9 @@
 import time
-from arduino.app_utils import *
+import sys
+from arduino.app_utils import App, Bridge
 
-logger = Logger("seguidor-pared")
+print("--- Robot Seguidor de Pared (Control P) ---")
+sys.stdout.flush()
 
 SETPOINT_DERECHA = 15.0
 KP = 1.5
@@ -43,9 +45,11 @@ def al_recibir_distancias(dC, dR):
     pwm_der = int(clip(VELOCIDAD_BASE - ajuste, 0, 255))
 
     Bridge.notify("motores", pwm_izq, pwm_der)
-    logger.info(f"dC={dC:.1f} dR={dR:.1f} fR={dR_f:.1f} e={error:.1f} a={ajuste} m={pwm_izq}/{pwm_der}")
+    
+    # Estilo medicion-distancia: print + flush
+    print(f">> C: {dC:5.1f} | R: {dR:5.1f} | FILTRO: {dR_f:5.1f} | ERROR: {error:5.1f} | M: {pwm_izq}/{pwm_der}")
+    sys.stdout.flush()
 
 Bridge.provide("distancias", al_recibir_distancias)
 
-logger.info("\n\n\n\n\nIniciando App de Seguidor de Pared...")
 App.run()
