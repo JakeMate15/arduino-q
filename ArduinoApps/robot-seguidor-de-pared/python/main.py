@@ -19,7 +19,7 @@ controller = WallFollowerP(
     filtro_alpha=0.7,
 )
 
-runpause = RunPause(run_seconds=3.0, pause_seconds=4.0)
+runpause = RunPause(run_seconds=3.0, pause_seconds=10.0)
 runpause.start()
 
 _prev_phase = runpause.phase
