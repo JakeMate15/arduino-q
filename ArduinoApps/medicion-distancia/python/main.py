@@ -16,5 +16,5 @@ def al_recibir_distancias(izq, centro, der):
 # Registramos el 'provider' para que coincida con el Bridge.notify del sketch
 Bridge.provide("distancias", al_recibir_distancias)
 
-# Ejecutamos la aplicación. El bucle se maneja internamente al recibir notificaciones.
+  # Ejecutamos la aplicación. El bucle se maneja internamente al recibir notificaciones.
 App.run()
