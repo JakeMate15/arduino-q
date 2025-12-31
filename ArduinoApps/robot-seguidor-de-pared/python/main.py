@@ -5,6 +5,8 @@ from controller import WallFollowerP
 from runner import RunPause
 from tuner import SweepTuner
 
+print("\n\n\n\n\n\n\n\n")
+print("==================================================")
 print("--- Auto ajuste (barrido) | RUN 5s / PAUSA 10s ---")
 sys.stdout.flush()
 
