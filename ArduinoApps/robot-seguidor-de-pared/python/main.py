@@ -2,54 +2,63 @@ import time
 import sys
 from arduino.app_utils import App, Bridge
 
-print("--- Robot Seguidor de Pared (Control P) ---")
+from controller import WallFollowerP
+from runner import RunPause
+
+print("--- Robot Seguidor de Pared (Control P + Run/Pause) ---")
 sys.stdout.flush()
 
-SETPOINT_DERECHA = 15.0
-KP = 1.5
-VELOCIDAD_BASE = 100
-DISTANCIA_OBSTACULO = 15.0
+controller = WallFollowerP(
+    setpoint_derecha=15.0,
+    kp=1.5,
+    velocidad_base=100,
+    distancia_obstaculo=15.0,
+    corr_max=40,
+    sin_pared_umbral=300.0,
+    zona_muerta=1.0,
+    filtro_alpha=0.7,
+)
 
-CORR_MAX = 40
-SIN_PARED_UMBRAL = 300.0
-ZONA_MUERTA = 1.0
+runpause = RunPause(run_seconds=3.0, pause_seconds=4.0)
+runpause.start()
 
-dR_f = None
-
-def clip(x, lo, hi):
-    return max(lo, min(hi, x))
+_prev_phase = runpause.phase
 
 def al_recibir_distancias(dC, dR):
-    global dR_f
+    global _prev_phase
 
-    if dC <= DISTANCIA_OBSTACULO:
-        Bridge.notify("motores", -80, 80)
+    change = runpause.update()
+    if change == "to_pause":
+        Bridge.notify("motores", 0, 0)
+    elif change == "to_run":
+        pass
+
+    if runpause.phase == "pause":
+        Bridge.notify("motores", 0, 0)
+        if _prev_phase != "pause":
+            print(f"[PAUSA] {runpause.pause_s:.1f}s para regresar al inicio")
+            sys.stdout.flush()
+        _prev_phase = "pause"
         return
 
-    if dR >= SIN_PARED_UMBRAL:
-        Bridge.notify("motores", 140, 80)
-        return
-
-    if dR_f is None:
-        dR_f = dR
-    dR_f = 0.7 * dR_f + 0.3 * dR
-
-    error = dR_f - SETPOINT_DERECHA
-
-    if abs(error) <= ZONA_MUERTA:
-        ajuste = 0
-    else:
-        ajuste = clip(int(KP * error), -CORR_MAX, CORR_MAX)
-
-    pwm_izq = int(clip(VELOCIDAD_BASE + ajuste, 0, 255))
-    pwm_der = int(clip(VELOCIDAD_BASE - ajuste, 0, 255))
-
+    pwm_izq, pwm_der, info = controller.step(dC, dR)
     Bridge.notify("motores", pwm_izq, pwm_der)
-    
-    # Estilo medicion-distancia: print + flush
-    print(f">> C: {dC:5.1f} | R: {dR:5.1f} | FILTRO: {dR_f:5.1f} | ERROR: {error:5.1f} | M: {pwm_izq}/{pwm_der}")
+
+    if info == "obst":
+        print(f">> C:{dC:5.1f} R:{dR:5.1f}  [OBST]  m:{pwm_izq}/{pwm_der}  run:{runpause.time_left:4.1f}s")
+    elif info == "buscar":
+        print(f">> C:{dC:5.1f} R:{dR:5.1f} [BUSCAR] m:{pwm_izq}/{pwm_der}  run:{runpause.time_left:4.1f}s")
+    else:
+        dR_f, error, ajuste = info
+        print(f">> C:{dC:5.1f} R:{dR:5.1f} F:{dR_f:5.1f} E:{error:5.1f} A:{ajuste:4d} m:{pwm_izq}/{pwm_der} run:{runpause.time_left:4.1f}s")
     sys.stdout.flush()
 
+    if _prev_phase != "run":
+        print(f"[RUN] {runpause.run_s:.1f}s")
+        sys.stdout.flush()
+    _prev_phase = "run"
+
 Bridge.provide("distancias", al_recibir_distancias)
+
 
 App.run()
