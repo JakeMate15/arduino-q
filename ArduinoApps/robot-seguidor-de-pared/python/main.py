@@ -41,7 +41,7 @@ controller = WallFollowerP(
 tuner = SweepTuner(make_candidates())
 tuner.start()
 
-runpause = RunPause(run_seconds=5.0, pause_seconds=10.0)
+runpause = RunPause(run_seconds=10.0, pause_seconds=10.0)
 runpause.start()
 
 _prev_phase = runpause.phase
