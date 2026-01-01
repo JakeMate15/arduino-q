@@ -69,16 +69,13 @@ class SweepTuner:
         return min(self.results, key=lambda x: x[1])
 
 class TwiddleTuner:
-    def __init__(
-        self,
-        base_params,
-        keys=("kp", "corr_max"),
-        deltas=(0.5, 10.0),
-        tol=0.05,
-        reps=2,
-        bounds=None,
-    ):
+    def __init__(self, base_params, keys=("kp", "corr_max"), deltas=(0.5, 10.0), tol=0.05, reps=2, bounds=None):
         self.params = dict(base_params)
+        self.best_params = dict(self.params)
+        self.base_params = dict(base_params)
+
+        self.last_avg_cost = None
+
         self.keys = list(keys)
         self.deltas = [float(d) for d in deltas]
         self.tol = float(tol)
@@ -88,24 +85,15 @@ class TwiddleTuner:
         self.best_cost = float("inf")
 
         self.i = 0
-        self.phase = 0  # 0: try +, 1: try -, 2: update deltas & next key
+        self.phase = 0
         self.sign = +1
 
         self._rep_count = 0
         self._rep_cost_sum = 0.0
 
         self.finished = False
-        self.history = []  # lista de (params_snapshot, cost)
+        self.history = []
 
-        # métricas por RUN (igual que Sweep)
-        self._prev_e = None
-        self._sum_abs_e = 0.0
-        self._sum_abs_de = 0.0
-        self._sat = 0
-        self._n = 0
-        self._bad = 0
-
-    def _reset_metrics(self):
         self._prev_e = None
         self._sum_abs_e = 0.0
         self._sum_abs_de = 0.0
@@ -114,6 +102,10 @@ class TwiddleTuner:
         self._bad = 0
 
     def start(self):
+        self.params = dict(self.base_params)
+        self.best_params = dict(self.params)
+        self.last_avg_cost = None
+
         self.finished = False
         self.i = 0
         self.phase = 0
@@ -187,6 +179,7 @@ class TwiddleTuner:
             return "repeat"  # repetir mismo params otra vez
 
         avg_cost = self._rep_cost_sum / self.reps
+        self.last_avg_cost = avg_cost
         self._rep_cost_sum = 0.0
         self._rep_count = 0
 
@@ -201,6 +194,7 @@ class TwiddleTuner:
         if self.best_cost == float("inf"):
             # primera evaluación: define best y luego intenta +d
             self.best_cost = avg_cost
+            self.best_params = dict(self.params)
             self.sign = +1
             self._tweak(k, +d)
             self.phase = 0
@@ -210,6 +204,7 @@ class TwiddleTuner:
             # acabamos de evaluar params con +d
             if avg_cost < self.best_cost:
                 self.best_cost = avg_cost
+                self.best_params = dict(self.params)
                 self.deltas[self.i] *= 1.1
                 self._advance_key()
             else:
@@ -222,6 +217,7 @@ class TwiddleTuner:
             # acabamos de evaluar params con -d
             if avg_cost < self.best_cost:
                 self.best_cost = avg_cost
+                self.best_params = dict(self.params)
                 self.deltas[self.i] *= 1.1
             else:
                 # volver al valor original (sumar d) y reducir delta
@@ -240,5 +236,5 @@ class TwiddleTuner:
         self._tweak(k, +d)
 
     def best(self):
-        return dict(self.params), self.best_cost
+        return dict(self.best_params), self.best_cost
 

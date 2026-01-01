@@ -26,7 +26,7 @@ tuner = TwiddleTuner(
     base_params=base_params,
     keys=("kp", "corr_max"),
     deltas=(0.5, 10.0),
-    tol=0.10,
+    tol=1.0
     reps=2,
     bounds={
         "kp": (0.1, 6.0),
