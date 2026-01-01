@@ -78,23 +78,32 @@ class TwiddleTuner:
         self.params = dict(base_params)
         self.best_params = dict(self.params)
         self.base_params = dict(base_params)
+
         self.keys = list(keys)
         self.deltas = [float(d) for d in deltas]
         self.tol = float(tol)
         self.reps = int(reps)
         self.bounds = bounds or {}
+
         self.best_cost = float("inf")
-        self.i, self.phase, self.sign = 0, 0, +1
-        self._rep_count, self._rep_cost_sum = 0, 0.0
+        self.i = 0
+        self.phase = 0
+        
+        self._rep_count = 0
+        self._rep_cost_sum = 0.0
         self.finished = False
         self.history = []
+        
         self._reset_metrics()
 
     def _reset_metrics(self):
+        """Limpia los acumuladores para un nuevo RUN."""
         self._prev_e = None
         self._sum_abs_e = 0.0
         self._sum_abs_de = 0.0
-        self._sat, self._n, self._bad = 0, 0, 0
+        self._sat = 0
+        self._n = 0
+        self._bad = 0
 
     def start(self):
         self.best_cost = float("inf")
