@@ -65,4 +65,4 @@ class WallFollowerP:
         pwm_izq = int(self.clip(base + ajuste, 0, 255))
         pwm_der = int(self.clip(base - ajuste, 0, 255))
 
-        return pwm_izq, pwm_der, "ok", (self.dR_f, error, ajuste)
+        return pwm_izq, pwm_der, "ok", (self.dR_f, error, derivative, ajuste)

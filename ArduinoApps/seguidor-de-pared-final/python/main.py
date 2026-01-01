@@ -1,22 +1,46 @@
 import sys
+import time
 from arduino.app_utils import App, Bridge
 
 from controller import WallFollowerP
 from runner import RunPause
 from tuner import TwiddleTuner
 
-print("\n\n\n\n\n\n\n\n")
-print("==================================================")
-print("--- Auto ajuste (TWIDDLE) | RUN 10s / PAUSA 10s ---")
-sys.stdout.flush()
+# --- Configuración Visual y Monitoreo ---
+_ciclo = 0
 
 def label(p):
     return f"kp={p['kp']:.2f} kd={p['kd']:.2f} base={p['base']} corr={int(p['corr_max'])}"
 
+def imprimir_cabecera():
+    print("\n" + "="*95)
+    # Columnas: Ciclo, Distancia, Error, Derivada, Ajuste, Motores, Visualización
+    print(f"{'CICLO':<6} | {'DIST':<6} | {'ERR':<7} | {'DERIV':<7} | {'ADJ':<6} | {'PWM_I':<6} | {'PWM_D':<6} | {'GRAFICO (Setpoint |)'}")
+    print("-" * 95)
+
+def log_ciclo(info, pwm_izq, pwm_der, mode):
+    global _ciclo
+    _ciclo += 1
+    
+    # Extraemos la info (dR_f, error, derivative, ajuste)
+    dist_f, error, derivative, ajuste = info if info else (0, 0, 0, 0)
+    
+    # Representación visual rápida de la posición respecto al muro
+    # El centro '|' es 15cm. 'R' es el robot.
+    barra = [" "] * 15
+    # Mapeamos el error a la barra (escala 1:2)
+    idx_robot = int(max(0, min(14, 7 + (error * 0.5))))
+    barra[7] = "|" 
+    barra[idx_robot] = "R"
+    visual = "".join(barra)
+
+    print(f"{_ciclo:<6} | {dist_f:>6.1f} | {error:>7.2f} | {derivative:>7.2f} | {ajuste:>6} | {pwm_izq:>6} | {pwm_der:>6} | [{visual}] {mode}")
+
+# --- Parámetros Iniciales ---
 base_params = {
     "base": 100,
     "kp": 2.0,
-    "kd": 1.0,           # NUEVO: Valor inicial sugerido para Kd
+    "kd": 5.0,           # Kd suele ser más alto que Kp para notar el efecto
     "corr_max": 80,
     "zona_muerta": 1.0,
     "obst_izq": -80, "obst_der": 80,
@@ -26,21 +50,15 @@ base_params = {
 tuner = TwiddleTuner(
     base_params=base_params,
     keys=("kp", "kd", "corr_max"),
-    
-    # Deltas iniciales (cuánto salta el valor al probar):
-    # kp salta 0.5, kd salta 1.0, corr_max salta 10
-    deltas=(1.0, 2.0, 20.0),
-    
-    tol=0.2, # Tolerancia para detenerse (suma de deltas)
-    reps=2,  # Repeticiones por configuración
-    
+    deltas=(1.0, 2.0, 20.0), # Saltos iniciales para Twiddle
+    tol=0.2, 
+    reps=2,  # Cada config se prueba 2 veces para promediar
     bounds={
         "kp": (0.5, 15.0),
-        "kd": (0.0, 50.0),      # NUEVO: Limites para Kd (no negativo, max razonable)
+        "kd": (0.0, 60.0),
         "corr_max": (20.0, 150.0),
     }
 )
-tuner.start()
 
 controller = WallFollowerP(
     setpoint_derecha=15.0,
@@ -49,56 +67,74 @@ controller = WallFollowerP(
     filtro_alpha=0.7,
 )
 
-runpause = RunPause(run_seconds=10.0, pause_seconds=15.0)
-runpause.start()
+runpause = RunPause(run_seconds=10.0, pause_seconds=10.0)
 
-_prev_phase = runpause.phase
+# --- Lógica Principal ---
+_prev_phase = None
 _run_started = False
 
 def send_motors(l, r):
     Bridge.notify("motores", int(l), int(r))
 
 def al_recibir_distancias(dC, dR):
-    global _prev_phase, _run_started
+    global _prev_phase, _run_started, _ciclo
 
     if tuner.finished:
         send_motors(0, 0)
         best_params, best_cost = tuner.best()
-        print("\n=== TERMINADO ===")
-        print(f"MEJOR: {label(best_params)} | best_cost={best_cost:.3f}")
+        print("\n" + "!"*50)
+        print(f"OPTIMIZACIÓN COMPLETA")
+        print(f"MEJOR CONFIG: {label(best_params)}")
+        print(f"COSTO: {best_cost:.3f}")
+        print("!"*50)
         sys.stdout.flush()
         return
 
     runpause.update()
 
+    # --- FASE DE PAUSA ---
     if runpause.phase == "pause":
         send_motors(0, 0)
 
         if _prev_phase != "pause":
             if _run_started:
-                action = tuner.end_run()
+                # Al terminar un RUN, mostramos resumen de desempeño
+                cost, mae, osc, sat, bad = tuner._score()
+                tuner.end_run()
                 _run_started = False
 
-                if tuner.finished:
-                    return
-
-                controller.reset()
-                print(f"\n[PAUSA {runpause.pause_s:.0f}s] siguiente: {label(tuner.params)}  (sum_deltas={sum(tuner.deltas):.3f})")
-                sys.stdout.flush()
+                print("\n" + "-"*40)
+                print(f"RESUMEN RUN: Costo={cost:.3f} | MAE={mae:.2f} | OSC={osc:.2f}")
+                print(f"Próxima prueba: {label(tuner.params)}")
+                print("-"*40)
 
         _prev_phase = "pause"
         return
 
+    # --- FASE DE EJECUCIÓN (RUN) ---
     if _prev_phase != "run":
         _run_started = True
-        print(f"\n[RUN {runpause.run_s:.0f}s] probando {label(tuner.params)}")
-        sys.stdout.flush()
+        _ciclo = 0
+        controller.reset()
+        print(f"\n\n[INICIANDO RUN] Probando: {label(tuner.params)}")
+        imprimir_cabecera()
         _prev_phase = "run"
 
+    # 1. Calcular paso del controlador
     pwm_izq, pwm_der, mode, info = controller.step(dC, dR, tuner.params)
+    
+    # 2. Enviar a motores
     send_motors(pwm_izq, pwm_der)
+    
+    # 3. Registrar datos en el Tuner
     tuner.observe(mode, info, pwm_izq, pwm_der)
+    
+    # 4. Monitoreo en tiempo real (Telemetría)
+    log_ciclo(info, pwm_izq, pwm_der, mode)
 
+# --- Inicio del Programa ---
+print("\nSISTEMA DE AUTO-AJUSTE PD INICIADO")
+tuner.start()
+runpause.start()
 Bridge.provide("distancias", al_recibir_distancias)
-
 App.run()
