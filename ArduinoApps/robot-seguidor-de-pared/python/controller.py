@@ -19,7 +19,6 @@ class WallFollowerP:
     def step(self, dC, dR, params):
         base = int(params["base"])
         kp = float(params["kp"])
-        # NUEVO: Leemos kd de los parametros
         kd = float(params.get("kd", 0.0)) 
         
         corr_max = int(params["corr_max"])
@@ -30,32 +29,36 @@ class WallFollowerP:
         busc_izq = int(params.get("busc_izq", 140))
         busc_der = int(params.get("busc_der", 80))
 
+        # 1. DETECCIÓN DE OBSTÁCULO FRONTAL
         if dC <= self.obst:
             return obst_izq, obst_der, "obst", None
 
+        # 2. SI NO HAY PARED (Resetear memoria del error)
         if dR >= self.sin_pared:
-            # Si perdemos la pared, reseteamos el error previo para no dar un golpe al volver
-            self.prev_error = None 
+            self.prev_error = None  # <--- AQUÍ: Si perdemos la pared, borramos el pasado
             return busc_izq, busc_der, "buscar", None
 
+        # 3. FILTRADO DE SEÑAL
         if self.dR_f is None:
             self.dR_f = dR
         self.dR_f = self.alpha * self.dR_f + (1.0 - self.alpha) * dR
 
+        # 4. CÁLCULO DEL ERROR
         error = self.dR_f - self.setpoint
 
-        # NUEVO: Calculo del termino Derivativo (D)
-        # Si es la primera vez (prev_error is None), asumimos derivada 0
+        # 5. INICIALIZACIÓN DEL ERROR PREVIO (Para evitar el "salto" derivativo)
         if self.prev_error is None:
-            self.prev_error = error
+            self.prev_error = error # <--- AQUÍ: La primera vez que vemos pared, asumimos que no hay cambio
         
+        # 6. CÁLCULO DE LA DERIVADA
         derivative = error - self.prev_error
-        self.prev_error = error # Actualizamos para la siguiente vuelta
+        self.prev_error = error # Guardamos para el siguiente ciclo
 
+        # 7. LÓGICA DE CONTROL (PD)
         if abs(error) <= zona:
             ajuste = 0
         else:
-            # FORMULA PD: Kp * Error + Kd * Derivada
+            # $ajuste = K_p \cdot error + K_d \cdot derivative$
             ajuste = int(kp * error + kd * derivative)
             ajuste = self.clip(ajuste, -corr_max, corr_max)
 

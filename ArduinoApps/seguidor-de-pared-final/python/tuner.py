@@ -57,11 +57,13 @@ class SweepTuner:
     def _score(self):
         if self._n == 0:
             return (1e9, 1e9, 1e9, 1.0, self._bad)
-        mae = self._sum_abs_e / self._n
-        osc = self._sum_abs_de / self._n
-        sat = self._sat / self._n
-        bad = self._bad
-        cost = mae + 1.5 * osc + 10.0 * sat + 50.0 * bad
+        
+        mae = self._sum_abs_e / self._n      # Error promedio (Precisión)
+        osc = self._sum_abs_de / self._n     # Cambio de error (Estabilidad)
+        sat = self._sat / self._n            # % de tiempo en motores al máximo
+        bad = self._bad                      # Veces que perdió la pared o chocó
+        
+        cost = mae + 2.0 * osc + 10.0 * sat + 50.0 * bad
         return (cost, mae, osc, sat, bad)
 
     def best(self):
