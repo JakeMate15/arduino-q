@@ -42,7 +42,7 @@ def log_ciclo(info, pwm_izq, pwm_der, mode):
 base_params = {
     "base": 150,
     "kp": 1.5,
-    "kd": 10.0,           # Kd suele ser más alto que Kp para notar el efecto
+    "kd": 10.0,           
     "corr_max": 100,
     "zona_muerta": 1.0,
     "obst_izq": -80, "obst_der": 80,
@@ -51,10 +51,10 @@ base_params = {
 
 tuner = TwiddleTuner(
     base_params=base_params,
-    keys=("kp", "kd", "corr_max"),
-    deltas=(0.5, 5.0, 20.0),
+    keys=("kp", "kd", "corr_max"), # TRES llaves
+    deltas=(0.5, 5.0, 20.0),       # TRES deltas
     tol=0.2, 
-    reps=2,  # Cada config se prueba 2 veces para promediar
+    reps=2,  
     bounds={
         "kp": (0.5, 15.0),
         "kd": (0.0, 60.0),

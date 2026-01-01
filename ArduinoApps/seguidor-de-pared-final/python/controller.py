@@ -1,11 +1,11 @@
 class WallFollowerP:
-    def __init__(self, setpoint_derecha=15.0, distancia_obstaculo=15.0, sin_pared_umbral=300.0, filtro_alpha=0.7):
+    def __init__(self, setpoint_derecha=15.0, distancia_obstaculo=20.0, sin_pared_umbral=300.0, filtro_alpha=0.7):
         self.setpoint = float(setpoint_derecha)
         self.obst = float(distancia_obstaculo)
         self.sin_pared = float(sin_pared_umbral)
         self.alpha = float(filtro_alpha)
         self.dR_f = None
-        self.prev_error = 0.0
+        self.prev_error = None
 
     @staticmethod
     def clip(x, lo, hi):
@@ -13,12 +13,12 @@ class WallFollowerP:
 
     def reset(self):
         self.dR_f = None
-        self.prev_error = 0.0
+        self.prev_error = None
 
     def step(self, dC, dR, params):
         base = int(params["base"])
         kp = float(params["kp"])
-        kd = float(params.get("kd", 0.0))  # Leemos Kd (por defecto 0 si no existe)
+        kd = float(params.get("kd", 0.0))
         corr_max = int(params["corr_max"])
         zona = float(params["zona_muerta"])
 
@@ -49,7 +49,6 @@ class WallFollowerP:
         if abs(error) <= zona:
             ajuste = 0
         else:
-            # PD Control: Kp * error + Kd * derivative
             ajuste = int(kp * error + kd * derivative)
             ajuste = self.clip(ajuste, -corr_max, corr_max)
 
