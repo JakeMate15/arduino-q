@@ -15,9 +15,9 @@ def label(p):
 
 base_params = {
     "base": 100,
-    "kp": 1.5,
-    "kd": 2.0,           # NUEVO: Valor inicial sugerido para Kd
-    "corr_max": 40,
+    "kp": 2.0,
+    "kd": 1.0,           # NUEVO: Valor inicial sugerido para Kd
+    "corr_max": 80,
     "zona_muerta": 1.0,
     "obst_izq": -80, "obst_der": 80,
     "busc_izq": 140, "busc_der": 80,
@@ -25,20 +25,19 @@ base_params = {
 
 tuner = TwiddleTuner(
     base_params=base_params,
-    # AQUI AGREGAMOS "kd" A LA LISTA DE LLAVES A OPTIMIZAR
-    keys=("kp", "kd", "corr_max"), 
+    keys=("kp", "kd", "corr_max"),
     
     # Deltas iniciales (cuánto salta el valor al probar):
     # kp salta 0.5, kd salta 1.0, corr_max salta 10
-    deltas=(0.5, 1.0, 10.0), 
+    deltas=(1.0, 2.0, 20.0),
     
-    tol=0.5, # Tolerancia para detenerse (suma de deltas)
+    tol=0.2, # Tolerancia para detenerse (suma de deltas)
     reps=2,  # Repeticiones por configuración
     
     bounds={
-        "kp": (0.1, 8.0),
-        "kd": (0.0, 20.0),      # NUEVO: Limites para Kd (no negativo, max razonable)
-        "corr_max": (10.0, 150.0),
+        "kp": (0.5, 15.0),
+        "kd": (0.0, 50.0),      # NUEVO: Limites para Kd (no negativo, max razonable)
+        "corr_max": (20.0, 150.0),
     }
 )
 tuner.start()

@@ -60,8 +60,9 @@ class SweepTuner:
         mae = self._sum_abs_e / self._n
         osc = self._sum_abs_de / self._n
         sat = self._sat / self._n
-        cost = mae + 0.6 * osc + 10.0 * sat + 50.0 * self._bad
-        return (cost, mae, osc, sat, self._bad)
+        bad = self._bad
+        cost = mae + 1.5 * osc + 10.0 * sat + 50.0 * bad
+        return (cost, mae, osc, sat, bad)
 
     def best(self):
         if not self.results:
