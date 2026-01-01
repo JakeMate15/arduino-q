@@ -22,8 +22,9 @@ def log_ciclo(info, pwm_izq, pwm_der, mode):
     global _ciclo
     _ciclo += 1
     
-    # Extraemos la info (dR_f, error, derivative, ajuste)
-    dist_f, error, derivative, ajuste = info if info else (0, 0, 0, 0)
+    # Extraemos la info (dR_f, error, ajuste)
+    dist_f, error, ajuste = info if info else (0, 0, 0)
+    derivative = 0.0
     
     # Representación visual rápida de la posición respecto al muro
     # El centro '|' es 15cm. 'R' es el robot.
