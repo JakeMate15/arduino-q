@@ -5,6 +5,7 @@ class WallFollowerP:
         self.sin_pared = float(sin_pared_umbral)
         self.alpha = float(filtro_alpha)
         self.dR_f = None
+        self.prev_error = 0.0
 
     @staticmethod
     def clip(x, lo, hi):
@@ -12,10 +13,12 @@ class WallFollowerP:
 
     def reset(self):
         self.dR_f = None
+        self.prev_error = 0.0
 
     def step(self, dC, dR, params):
         base = int(params["base"])
         kp = float(params["kp"])
+        kd = float(params.get("kd", 0.0))  # Leemos Kd (por defecto 0 si no existe)
         corr_max = int(params["corr_max"])
         zona = float(params["zona_muerta"])
 
@@ -28,6 +31,7 @@ class WallFollowerP:
             return obst_izq, obst_der, "obst", None
 
         if dR >= self.sin_pared:
+            self.prev_error = None 
             return busc_izq, busc_der, "buscar", None
 
         if self.dR_f is None:
@@ -35,14 +39,19 @@ class WallFollowerP:
         self.dR_f = self.alpha * self.dR_f + (1.0 - self.alpha) * dR
 
         error = self.dR_f - self.setpoint
+        
+        # Calculamos la derivada (cambio del error)
+        derivative = error - self.prev_error
+        self.prev_error = error
 
         if abs(error) <= zona:
             ajuste = 0
         else:
-            ajuste = int(kp * error)
+            # PD Control: Kp * error + Kd * derivative
+            ajuste = int(kp * error + kd * derivative)
             ajuste = self.clip(ajuste, -corr_max, corr_max)
 
         pwm_izq = int(self.clip(base + ajuste, 0, 255))
         pwm_der = int(self.clip(base - ajuste, 0, 255))
 
-        return pwm_izq, pwm_der, "ok", (self.dR_f, error, ajuste)
+        return pwm_izq, pwm_der, "ok", (self.dR_f, error, derivative, ajuste)

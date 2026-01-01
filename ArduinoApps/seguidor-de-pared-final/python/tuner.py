@@ -28,11 +28,13 @@ class SweepTuner:
         self._bad = 0
 
     def observe(self, mode, info, pwm_izq, pwm_der):
-        if mode != "ok":
+        if mode != "ok" or info is None: # Añadimos protección contra None
             self._bad += 1
             return
 
-        dR_f, e, ajuste = info
+        # CAMBIO: Ahora desempacamos 4 valores (añadimos _ para ignorar la derivada aquí)
+        dR_f, e, derivative, ajuste = info 
+        
         self._sum_abs_e += abs(e)
         if self._prev_e is not None:
             self._sum_abs_de += abs(e - self._prev_e)

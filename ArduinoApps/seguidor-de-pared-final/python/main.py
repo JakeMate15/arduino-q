@@ -22,9 +22,10 @@ def log_ciclo(info, pwm_izq, pwm_der, mode):
     global _ciclo
     _ciclo += 1
     
-    # Extraemos la info (dR_f, error, ajuste)
-    dist_f, error, ajuste = info if info else (0, 0, 0)
-    derivative = 0.0
+    if info is not None:
+        dist_f, error, derivative, ajuste = info
+    else:
+        dist_f, error, derivative, ajuste = 0, 0, 0, 0
     
     # Representación visual rápida de la posición respecto al muro
     # El centro '|' es 15cm. 'R' es el robot.
@@ -77,61 +78,69 @@ _run_started = False
 def send_motors(l, r):
     Bridge.notify("motores", int(l), int(r))
 
+import traceback
+
 def al_recibir_distancias(dC, dR):
     global _prev_phase, _run_started, _ciclo
 
-    if tuner.finished:
-        send_motors(0, 0)
-        best_params, best_cost = tuner.best()
-        print("\n" + "!"*50)
-        print(f"OPTIMIZACIÓN COMPLETA")
-        print(f"MEJOR CONFIG: {label(best_params)}")
-        print(f"COSTO: {best_cost:.3f}")
-        print("!"*50)
+    try:
+        if tuner.finished:
+            send_motors(0, 0)
+            best_params, best_cost = tuner.best()
+            print("\n" + "!"*50)
+            print(f"OPTIMIZACIÓN COMPLETA")
+            print(f"MEJOR CONFIG: {label(best_params)}")
+            print(f"COSTO: {best_cost:.3f}")
+            print("!"*50)
+            sys.stdout.flush()
+            return
+
+        runpause.update()
+
+        # --- FASE DE PAUSA ---
+        if runpause.phase == "pause":
+            send_motors(0, 0)
+
+            if _prev_phase != "pause":
+                if _run_started:
+                    # Al terminar un RUN, mostramos resumen de desempeño
+                    cost, mae, osc, sat, bad = tuner._score()
+                    tuner.end_run()
+                    _run_started = False
+
+                    print("\n" + "-"*40)
+                    print(f"RESUMEN RUN: Costo={cost:.3f} | MAE={mae:.2f} | OSC={osc:.2f}")
+                    print(f"Próxima prueba: {label(tuner.params)}")
+                    print("-"*40)
+
+            _prev_phase = "pause"
+            return
+
+        # --- FASE DE EJECUCIÓN (RUN) ---
+        if _prev_phase != "run":
+            _run_started = True
+            _ciclo = 0
+            controller.reset()
+            print(f"\n\n[INICIANDO RUN] Probando: {label(tuner.params)}")
+            imprimir_cabecera()
+            _prev_phase = "run"
+
+        # 1. Calcular paso del controlador
+        pwm_izq, pwm_der, mode, info = controller.step(dC, dR, tuner.params)
+        
+        # 2. Enviar a motores
+        send_motors(pwm_izq, pwm_der)
+        
+        # 3. Registrar datos en el Tuner
+        tuner.observe(mode, info, pwm_izq, pwm_der)
+        
+        # 4. Monitoreo en tiempo real (Telemetría)
+        log_ciclo(info, pwm_izq, pwm_der, mode)
+        
+    except Exception:
+        traceback.print_exc()
         sys.stdout.flush()
-        return
 
-    runpause.update()
-
-    # --- FASE DE PAUSA ---
-    if runpause.phase == "pause":
-        send_motors(0, 0)
-
-        if _prev_phase != "pause":
-            if _run_started:
-                # Al terminar un RUN, mostramos resumen de desempeño
-                cost, mae, osc, sat, bad = tuner._score()
-                tuner.end_run()
-                _run_started = False
-
-                print("\n" + "-"*40)
-                print(f"RESUMEN RUN: Costo={cost:.3f} | MAE={mae:.2f} | OSC={osc:.2f}")
-                print(f"Próxima prueba: {label(tuner.params)}")
-                print("-"*40)
-
-        _prev_phase = "pause"
-        return
-
-    # --- FASE DE EJECUCIÓN (RUN) ---
-    if _prev_phase != "run":
-        _run_started = True
-        _ciclo = 0
-        controller.reset()
-        print(f"\n\n[INICIANDO RUN] Probando: {label(tuner.params)}")
-        imprimir_cabecera()
-        _prev_phase = "run"
-
-    # 1. Calcular paso del controlador
-    pwm_izq, pwm_der, mode, info = controller.step(dC, dR, tuner.params)
-    
-    # 2. Enviar a motores
-    send_motors(pwm_izq, pwm_der)
-    
-    # 3. Registrar datos en el Tuner
-    tuner.observe(mode, info, pwm_izq, pwm_der)
-    
-    # 4. Monitoreo en tiempo real (Telemetría)
-    log_ciclo(info, pwm_izq, pwm_der, mode)
 
 # --- Inicio del Programa ---
 print("\nSISTEMA DE AUTO-AJUSTE PD INICIADO")
