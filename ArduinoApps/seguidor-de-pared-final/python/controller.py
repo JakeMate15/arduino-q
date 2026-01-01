@@ -40,7 +40,9 @@ class WallFollowerP:
 
         error = self.dR_f - self.setpoint
         
-        # Calculamos la derivada (cambio del error)
+        if self.prev_error is None:
+            self.prev_error = error
+        
         derivative = error - self.prev_error
         self.prev_error = error
 

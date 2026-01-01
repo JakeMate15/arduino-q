@@ -122,11 +122,12 @@ class TwiddleTuner:
         self._reset_metrics()
 
     def observe(self, mode, info, pwm_izq, pwm_der):
-        if mode != "ok":
+        if mode != "ok" or info is None:
             self._bad += 1
             return
 
-        dR_f, e, ajuste = info
+        dR_f, e, derivative, ajuste = info
+
         self._sum_abs_e += abs(e)
         if self._prev_e is not None:
             self._sum_abs_de += abs(e - self._prev_e)
@@ -138,18 +139,12 @@ class TwiddleTuner:
 
     def _score(self):
         if self._n == 0:
-            mae = 1e9
-            osc = 1e9
-            sat = 1.0
-            bad = self._bad
-            cost = 1e9 + 50.0 * bad
-            return (cost, mae, osc, sat, bad)
-
+            return (1e9, 1e9, 1e9, 1.0, self._bad)
         mae = self._sum_abs_e / self._n
         osc = self._sum_abs_de / self._n
         sat = self._sat / self._n
         bad = self._bad
-        cost = mae + 0.6 * osc + 10.0 * sat + 50.0 * bad
+        cost = mae + 2.5 * osc + 10.0 * sat + 50.0 * bad
         return (cost, mae, osc, sat, bad)
 
     def _apply_bounds(self, k):
