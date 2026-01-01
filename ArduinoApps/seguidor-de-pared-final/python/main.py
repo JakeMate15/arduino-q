@@ -38,10 +38,10 @@ def log_ciclo(info, pwm_izq, pwm_der, mode):
 
 # --- Parámetros Iniciales ---
 base_params = {
-    "base": 100,
-    "kp": 2.0,
-    "kd": 5.0,           # Kd suele ser más alto que Kp para notar el efecto
-    "corr_max": 80,
+    "base": 150,
+    "kp": 1.5,
+    "kd": 10.0,           # Kd suele ser más alto que Kp para notar el efecto
+    "corr_max": 100,
     "zona_muerta": 1.0,
     "obst_izq": -80, "obst_der": 80,
     "busc_izq": 140, "busc_der": 80,
@@ -50,7 +50,7 @@ base_params = {
 tuner = TwiddleTuner(
     base_params=base_params,
     keys=("kp", "kd", "corr_max"),
-    deltas=(1.0, 2.0, 20.0), # Saltos iniciales para Twiddle
+    deltas=(0.5, 5.0, 20.0),
     tol=0.2, 
     reps=2,  # Cada config se prueba 2 veces para promediar
     bounds={
@@ -67,7 +67,7 @@ controller = WallFollowerP(
     filtro_alpha=0.7,
 )
 
-runpause = RunPause(run_seconds=10.0, pause_seconds=10.0)
+runpause = RunPause(run_seconds=6.0, pause_seconds=10.0)
 
 # --- Lógica Principal ---
 _prev_phase = None
