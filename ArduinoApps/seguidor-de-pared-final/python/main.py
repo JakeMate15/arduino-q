@@ -11,11 +11,12 @@ print("--- Auto ajuste (TWIDDLE) | RUN 10s / PAUSA 10s ---")
 sys.stdout.flush()
 
 def label(p):
-    return f"kp={p['kp']:.2f} base={p['base']} corr={int(p['corr_max'])} zona={p['zona_muerta']:.1f}"
+    return f"kp={p['kp']:.2f} kd={p['kd']:.2f} base={p['base']} corr={int(p['corr_max'])}"
 
 base_params = {
     "base": 100,
     "kp": 1.5,
+    "kd": 2.0,           # NUEVO: Valor inicial sugerido para Kd
     "corr_max": 40,
     "zona_muerta": 1.0,
     "obst_izq": -80, "obst_der": 80,
@@ -24,13 +25,20 @@ base_params = {
 
 tuner = TwiddleTuner(
     base_params=base_params,
-    keys=("kp", "corr_max"),
-    deltas=(0.5, 10.0),
-    tol=1.0
-    reps=2,
+    # AQUI AGREGAMOS "kd" A LA LISTA DE LLAVES A OPTIMIZAR
+    keys=("kp", "kd", "corr_max"), 
+    
+    # Deltas iniciales (cuánto salta el valor al probar):
+    # kp salta 0.5, kd salta 1.0, corr_max salta 10
+    deltas=(0.5, 1.0, 10.0), 
+    
+    tol=0.5, # Tolerancia para detenerse (suma de deltas)
+    reps=2,  # Repeticiones por configuración
+    
     bounds={
-        "kp": (0.1, 6.0),
-        "corr_max": (10.0, 120.0),
+        "kp": (0.1, 8.0),
+        "kd": (0.0, 20.0),      # NUEVO: Limites para Kd (no negativo, max razonable)
+        "corr_max": (10.0, 150.0),
     }
 )
 tuner.start()
