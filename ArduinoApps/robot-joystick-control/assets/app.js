@@ -63,35 +63,97 @@ let controlState = {
 
 // --- Mode Management ---
 function setMode(mode) {
+    // Disable mode buttons during transition
+    modeBtns.forEach(btn => btn.disabled = true);
+
     currentMode = mode;
     socket.emit('change_mode', { mode: mode });
 
-    // Update UI
+    // Update active state
     modeBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
-    // Show/hide joystick section
+    // Clean control state when switching modes
+    resetControlState();
+
+    // Handle mode-specific UI with smooth transitions
     if (mode === 'manual') {
-        joystickSection.style.display = 'flex';
-        autoIndicator.style.display = 'none';
-        autoParamsSection.style.display = 'none';
-        videoSection.style.display = 'none';
+        showManualMode();
     } else if (mode === 'auto') {
-        joystickSection.style.display = 'none';
-        autoIndicator.style.display = 'flex';
-        autoParamsSection.style.display = 'block';
-        videoSection.style.display = 'block';
-
-        // Always ensure auto is toggled OFF when switching modes for safety
-        if (autoToggle) {
-            autoToggle.checked = false;
-            autoStatusLabel.textContent = 'OFF';
-        }
-
-        // Start video stream
-        initVideoStream();
+        showAutoMode();
     }
+
+    // Re-enable buttons after transition
+    setTimeout(() => {
+        modeBtns.forEach(btn => btn.disabled = false);
+    }, 300);
+}
+
+function showManualMode() {
+    // Add transitioning class for performance
+    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection];
+    sections.forEach(s => s.classList.add('section-transitioning'));
+
+    // Show manual controls
+    joystickSection.classList.remove('section-hidden');
+    joystickSection.classList.add('section-visible');
+
+    // Hide auto controls
+    autoIndicator.classList.remove('section-visible');
+    autoIndicator.classList.add('section-hidden');
+    autoParamsSection.classList.remove('section-visible');
+    autoParamsSection.classList.add('section-hidden');
+    videoSection.classList.remove('section-visible');
+    videoSection.classList.add('section-hidden');
+
+    // Remove transitioning class after animation
+    setTimeout(() => {
+        sections.forEach(s => s.classList.remove('section-transitioning'));
+    }, 300);
+}
+
+function showAutoMode() {
+    // Add transitioning class for performance
+    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection];
+    sections.forEach(s => s.classList.add('section-transitioning'));
+
+    // Hide manual controls
+    joystickSection.classList.remove('section-visible');
+    joystickSection.classList.add('section-hidden');
+
+    // Show auto controls
+    autoIndicator.classList.remove('section-hidden');
+    autoIndicator.classList.add('section-visible');
+    autoParamsSection.classList.remove('section-hidden');
+    autoParamsSection.classList.add('section-visible');
+    videoSection.classList.remove('section-hidden');
+    videoSection.classList.add('section-visible');
+
+    // Always ensure auto is toggled OFF when switching modes for safety
+    if (autoToggle) {
+        autoToggle.checked = false;
+        autoStatusLabel.textContent = 'OFF';
+    }
+
+    // Start video stream
+    initVideoStream();
+
+    // Remove transitioning class after animation
+    setTimeout(() => {
+        sections.forEach(s => s.classList.remove('section-transitioning'));
+    }, 300);
+}
+
+function resetControlState() {
+    // Reset manual control state
+    controlState.type = 'stop';
+    controlState.data = { x: 0, y: 0 };
+    controlState.dir = null;
+    pressedKeys.clear();
+
+    // Send stop command to ensure robot stops
+    socket.emit('joystick', { x: 0, y: 0 });
 }
 
 // Mode button click handlers
@@ -113,6 +175,18 @@ updateListsBtn.addEventListener('click', () => {
     const listA = listAInput.value.split(',').map(s => s.trim()).filter(s => s);
     const listB = listBInput.value.split(',').map(s => s.trim()).filter(s => s);
     socket.emit('set_object_lists', { list_a: listA, list_b: listB });
+
+    // Visual feedback
+    const originalText = updateListsBtn.textContent;
+    updateListsBtn.classList.add('success');
+    updateListsBtn.textContent = '';
+    updateListsBtn.disabled = true;
+
+    setTimeout(() => {
+        updateListsBtn.classList.remove('success');
+        updateListsBtn.textContent = originalText;
+        updateListsBtn.disabled = false;
+    }, 1500);
 });
 
 // Confidence slider
@@ -258,9 +332,9 @@ const joystick = nipplejs.create({
     size: joystickSize
 });
 
-joystick.on('move', (evt, data) => {
+joystick.on('move', (_evt, data) => {
     if (currentMode !== 'manual') return;
-    
+
     if (data.distance) {
         const force = Math.min(data.distance / 75, 1);
         const angle = data.angle.radian;
@@ -345,18 +419,14 @@ socket.on('mode_changed', (data) => {
         btn.classList.toggle('active', btn.dataset.mode === data.mode);
     });
 
-    // Update UI visibility
+    // Clean control state
+    resetControlState();
+
+    // Update UI visibility with smooth transitions
     if (data.mode === 'manual') {
-        joystickSection.style.display = 'flex';
-        autoIndicator.style.display = 'none';
-        autoParamsSection.style.display = 'none';
-        videoSection.style.display = 'none';
+        showManualMode();
     } else if (data.mode === 'auto') {
-        joystickSection.style.display = 'none';
-        autoIndicator.style.display = 'flex';
-        autoParamsSection.style.display = 'block';
-        videoSection.style.display = 'block';
-        initVideoStream();
+        showAutoMode();
     }
 });
 
@@ -372,3 +442,20 @@ socket.on('object_lists', (data) => {
         listBInput.value = data.list_b.join(', ');
     }
 });
+
+// --- Initialize UI on page load ---
+function initializeUI() {
+    // Ensure manual mode is visible on load
+    joystickSection.classList.add('section-visible');
+    joystickSection.classList.remove('section-hidden');
+
+    // Initialize detections list
+    renderDetections();
+}
+
+// Call init when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeUI);
+} else {
+    initializeUI();
+}
