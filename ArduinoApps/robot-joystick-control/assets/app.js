@@ -26,6 +26,19 @@ const autoParamsSection = document.getElementById('auto-params-section');
 const autoToggle = document.getElementById('auto-toggle');
 const autoStatusLabel = document.getElementById('auto-status-label');
 
+// Video elements
+const videoSection = document.getElementById('video-section');
+const videoIframe = document.getElementById('video-iframe');
+const videoPlaceholder = document.getElementById('video-placeholder');
+const recentDetectionsEl = document.getElementById('recent-detections');
+
+// Auto mode controls
+const listAInput = document.getElementById('list-a-input');
+const listBInput = document.getElementById('list-b-input');
+const updateListsBtn = document.getElementById('update-lists-btn');
+const confidenceSlider = document.getElementById('confidence-slider');
+const confidenceValue = document.getElementById('confidence-value');
+
 // Mode buttons
 const modeBtns = document.querySelectorAll('.mode-btn');
 const modeManual = document.getElementById('mode-manual');
@@ -36,6 +49,10 @@ const socket = io(`http://${window.location.host}`);
 
 // Estado actual
 let currentMode = 'manual';
+
+// Detections management
+const MAX_RECENT_DETECTIONS = 5;
+let detections = [];
 
 // Estado global de control
 let controlState = {
@@ -59,16 +76,21 @@ function setMode(mode) {
         joystickSection.style.display = 'flex';
         autoIndicator.style.display = 'none';
         autoParamsSection.style.display = 'none';
+        videoSection.style.display = 'none';
     } else if (mode === 'auto') {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
         autoParamsSection.style.display = 'block';
+        videoSection.style.display = 'block';
 
         // Always ensure auto is toggled OFF when switching modes for safety
         if (autoToggle) {
             autoToggle.checked = false;
             autoStatusLabel.textContent = 'OFF';
         }
+
+        // Start video stream
+        initVideoStream();
     }
 }
 
@@ -85,6 +107,71 @@ autoToggle.addEventListener('change', (e) => {
     socket.emit('toggle_auto', { active: active });
     autoStatusLabel.textContent = active ? 'ON' : 'OFF';
 });
+
+// Update object lists button
+updateListsBtn.addEventListener('click', () => {
+    const listA = listAInput.value.split(',').map(s => s.trim()).filter(s => s);
+    const listB = listBInput.value.split(',').map(s => s.trim()).filter(s => s);
+    socket.emit('set_object_lists', { list_a: listA, list_b: listB });
+});
+
+// Confidence slider
+confidenceSlider.addEventListener('input', (e) => {
+    const value = parseFloat(e.target.value);
+    confidenceValue.textContent = value.toFixed(2);
+    socket.emit('override_th', value);
+});
+
+// --- Video Stream Management ---
+let videoLoadInterval = null;
+
+function initVideoStream() {
+    const currentHostname = window.location.hostname;
+    const targetPort = 4912;
+    const targetPath = '/embed';
+    const streamUrl = `http://${currentHostname}:${targetPort}${targetPath}`;
+
+    videoIframe.onload = () => {
+        if (videoLoadInterval) {
+            clearInterval(videoLoadInterval);
+        }
+        videoPlaceholder.style.display = 'none';
+        videoIframe.style.display = 'block';
+    };
+
+    const startLoading = () => {
+        videoIframe.src = streamUrl;
+    };
+
+    videoLoadInterval = setInterval(startLoading, 1000);
+}
+
+// --- Detections Management ---
+function addDetection(detection) {
+    detections.unshift(detection);
+    if (detections.length > MAX_RECENT_DETECTIONS) {
+        detections.pop();
+    }
+    renderDetections();
+}
+
+function renderDetections() {
+    if (detections.length === 0) {
+        recentDetectionsEl.innerHTML = '<li class="no-detections">No se han detectado objetos</li>';
+        return;
+    }
+
+    recentDetectionsEl.innerHTML = '';
+    detections.forEach(det => {
+        const li = document.createElement('li');
+        const confidence = Math.floor(det.confidence * 100);
+        const time = new Date(det.timestamp).toLocaleTimeString();
+        li.innerHTML = `<span class="detection-name">${det.content}</span>
+                        <span class="detection-confidence">${confidence}%</span>
+                        <span class="detection-time">${time}</span>`;
+        recentDetectionsEl.appendChild(li);
+    });
+}
 
 // --- Keyboard Control ---
 const pressedKeys = new Set();
@@ -260,9 +347,25 @@ socket.on('mode_changed', (data) => {
         joystickSection.style.display = 'flex';
         autoIndicator.style.display = 'none';
         autoParamsSection.style.display = 'none';
+        videoSection.style.display = 'none';
     } else if (data.mode === 'auto') {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
         autoParamsSection.style.display = 'block';
+        videoSection.style.display = 'block';
+        initVideoStream();
+    }
+});
+
+socket.on('detection', (data) => {
+    addDetection(data);
+});
+
+socket.on('object_lists', (data) => {
+    if (data.list_a) {
+        listAInput.value = data.list_a.join(', ');
+    }
+    if (data.list_b) {
+        listBInput.value = data.list_b.join(', ');
     }
 });

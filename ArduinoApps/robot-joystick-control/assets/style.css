@@ -464,3 +464,170 @@ main {
         grid-template-columns: 1fr;
     }
 }
+
+/* Auto Mode Styles */
+.auto-params-section {
+    background-color: #f0f8ff;
+    border: 1px solid var(--arduino-blue);
+}
+
+.auto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.auto-switch-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auto-label {
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: var(--arduino-blue);
+}
+
+/* Object Lists Configuration */
+.object-lists-config {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.list-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.list-group label {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--arduino-blue);
+}
+
+.list-group input[type="text"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+/* Confidence Control */
+.confidence-control {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.confidence-control label {
+    font-size: 0.75rem;
+    color: var(--arduino-blue);
+}
+
+.confidence-control input[type="range"] {
+    width: 100%;
+}
+
+#confidence-value {
+    font-weight: bold;
+}
+
+/* Video Section */
+.video-section {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    grid-column: 1 / -1;
+}
+
+#video-container {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    background-color: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#video-iframe {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4/3;
+}
+
+.camera-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #888;
+    background-color: #222;
+    min-height: 200px;
+}
+
+.camera-status p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Detections List */
+.detections-list {
+    margin-top: 15px;
+}
+
+.detections-list h3 {
+    font-size: 0.9rem;
+    color: var(--arduino-blue);
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+}
+
+#recent-detections {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#recent-detections li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.8rem;
+    gap: 10px;
+}
+
+#recent-detections li:last-child {
+    border-bottom: none;
+}
+
+.detection-name {
+    flex: 1;
+    font-weight: bold;
+    color: var(--arduino-blue);
+}
+
+.detection-confidence {
+    font-weight: bold;
+    color: var(--success-green);
+}
+
+.detection-time {
+    color: #888;
+    font-size: 0.7rem;
+}
+
+.no-detections {
+    text-align: center;
+    color: #888;
+    padding: 20px !important;
+}

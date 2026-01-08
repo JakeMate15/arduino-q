@@ -3,14 +3,19 @@ Robot Joystick Control - Main Application
 Orchestrates controllers (Manual, Auto) and handles WebSocket communication.
 """
 import os
+from datetime import datetime, UTC
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
+from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
 from controllers import ManualController, AutoController
 
 # --- Initialization ---
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
+
+# --- Video Object Detection ---
+detection_stream = VideoObjectDetection(confidence=0.5, debounce_sec=0.0)
 
 # --- Controllers ---
 controllers = {
@@ -30,6 +35,34 @@ ciclos_ui = 0        # Counter to throttle UI updates
 
 # Log startup info
 logger.info("Controladores disponibles: manual, auto")
+
+# Storage for all detected objects
+all_detected_objects = {}
+
+
+def on_detect_objects(detections: dict):
+    """
+    Callback for when objects are detected by camera.
+    Updates the auto controller and sends detections to UI.
+    """
+    global all_detected_objects
+    all_detected_objects = detections
+
+    # Update auto controller with new detections
+    controllers["auto"].update_detections(detections)
+
+    # Send each detection to UI
+    for obj_name, obj_data in detections.items():
+        entry = {
+            "content": obj_name,
+            "confidence": obj_data.get("confidence"),
+            "timestamp": datetime.now(UTC).isoformat()
+        }
+        web_ui.send_message("detection", message=entry)
+
+
+# Register object detection callback
+detection_stream.on_detect_all(on_detect_objects)
 
 
 def set_mode(mode: str) -> bool:
@@ -190,12 +223,29 @@ def on_toggle_auto(sid, data):
         web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
 
 
+def on_set_object_lists(sid, data):
+    """Handle object lists update from frontend."""
+    list_a = data.get("list_a", [])
+    list_b = data.get("list_b", [])
+    controllers["auto"].set_object_lists(list_a, list_b)
+    logger.info(f"Listas actualizadas - A: {list_a}, B: {list_b}")
+    web_ui.send_message("status", {"message": "Listas de objetos actualizadas"})
+
+
+def on_override_confidence(sid, threshold):
+    """Handle confidence threshold override from frontend."""
+    detection_stream.override_threshold(threshold)
+    logger.info(f"Umbral de confianza actualizado: {threshold}")
+
+
 # --- Register callbacks ---
 Bridge.provide("distancias", al_recibir_distancias)
 web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
 web_ui.on_message("change_mode", on_change_mode)
 web_ui.on_message("toggle_auto", on_toggle_auto)
+web_ui.on_message("set_object_lists", on_set_object_lists)
+web_ui.on_message("override_th", on_override_confidence)
 
 
 @web_ui.on_connect
@@ -206,6 +256,7 @@ def on_connect(sid):
     # Send current state to new client
     web_ui.send_message("status", {"message": "Conectado al robot"})
     web_ui.send_message("mode_changed", {"mode": active_mode})
+    web_ui.send_message("object_lists", controllers["auto"].get_object_lists())
 
 
 if __name__ == "__main__":

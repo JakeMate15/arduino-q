@@ -45,7 +45,40 @@
                         <span id="auto-status-label" class="auto-label">OFF</span>
                     </div>
                 </div>
-                <!-- Placeholder for future auto mode parameters -->
+
+                <!-- Object Lists Configuration -->
+                <div class="object-lists-config">
+                    <div class="list-group">
+                        <label>Lista A (Adelante):</label>
+                        <input type="text" id="list-a-input" placeholder="cat, dog, person" value="cat, dog, person">
+                    </div>
+                    <div class="list-group">
+                        <label>Lista B (Atrás):</label>
+                        <input type="text" id="list-b-input" placeholder="cell phone, cup, clock" value="cell phone, cup, clock">
+                    </div>
+                    <button id="update-lists-btn" class="btn-apply">Actualizar Listas</button>
+                </div>
+
+                <!-- Confidence Control -->
+                <div class="confidence-control">
+                    <label>Confianza mínima: <span id="confidence-value">0.50</span></label>
+                    <input type="range" id="confidence-slider" min="0" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+
+            <!-- Video Feed Section (hidden by default) -->
+            <div id="video-section" class="card video-section" style="display: none;">
+                <h2>Cámara</h2>
+                <div id="video-container">
+                    <div id="video-placeholder" class="camera-status">
+                        <p>Buscando cámara...</p>
+                    </div>
+                    <iframe id="video-iframe" title="Video stream" width="640" height="480" frameBorder="0" style="display: none;"></iframe>
+                </div>
+                <div class="detections-list">
+                    <h3>Detecciones Recientes</h3>
+                    <ul id="recent-detections"></ul>
+                </div>
             </div>
 
             <div class="telemetry-section">
