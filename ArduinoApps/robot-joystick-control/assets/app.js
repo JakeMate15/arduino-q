@@ -32,6 +32,15 @@ const videoIframe = document.getElementById('video-iframe');
 const videoPlaceholder = document.getElementById('video-placeholder');
 const recentDetectionsEl = document.getElementById('recent-detections');
 
+// Camera controls
+const cameraToggle = document.getElementById('camera-toggle');
+const cameraStatusText = document.getElementById('camera-status-text');
+
+// Console elements
+const consoleSection = document.getElementById('console-section');
+const consoleInput = document.getElementById('console-input');
+const consoleSendBtn = document.getElementById('console-send-btn');
+
 // Auto mode controls
 const listAInput = document.getElementById('list-a-input');
 const listBInput = document.getElementById('list-b-input');
@@ -92,7 +101,7 @@ function setMode(mode) {
 
 function showManualMode() {
     // Add transitioning class for performance
-    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection];
+    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection, consoleSection];
     sections.forEach(s => s.classList.add('section-transitioning'));
 
     // Show manual controls
@@ -106,6 +115,8 @@ function showManualMode() {
     autoParamsSection.classList.add('section-hidden');
     videoSection.classList.remove('section-visible');
     videoSection.classList.add('section-hidden');
+    consoleSection.classList.remove('section-visible');
+    consoleSection.classList.add('section-hidden');
 
     // Remove transitioning class after animation
     setTimeout(() => {
@@ -115,7 +126,7 @@ function showManualMode() {
 
 function showAutoMode() {
     // Add transitioning class for performance
-    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection];
+    const sections = [joystickSection, autoIndicator, autoParamsSection, videoSection, consoleSection];
     sections.forEach(s => s.classList.add('section-transitioning'));
 
     // Hide manual controls
@@ -129,6 +140,8 @@ function showAutoMode() {
     autoParamsSection.classList.add('section-visible');
     videoSection.classList.remove('section-hidden');
     videoSection.classList.add('section-visible');
+    consoleSection.classList.remove('section-hidden');
+    consoleSection.classList.add('section-visible');
 
     // Always ensure auto is toggled OFF when switching modes for safety
     if (autoToggle) {
@@ -194,6 +207,40 @@ confidenceSlider.addEventListener('input', (e) => {
     const value = parseFloat(e.target.value);
     confidenceValue.textContent = value.toFixed(2);
     socket.emit('override_th', value);
+});
+
+// Camera toggle
+cameraToggle.addEventListener('change', (e) => {
+    const enabled = e.target.checked;
+    socket.emit('toggle_camera', { enabled: enabled });
+    cameraStatusText.textContent = enabled ? 'ON' : 'OFF';
+});
+
+// Console message
+function sendConsoleMessage() {
+    const message = consoleInput.value.trim();
+    if (message) {
+        socket.emit('console_message', { message: message });
+        consoleInput.value = '';
+
+        // Visual feedback
+        consoleSendBtn.disabled = true;
+        const originalText = consoleSendBtn.textContent;
+        consoleSendBtn.textContent = '✓';
+
+        setTimeout(() => {
+            consoleSendBtn.textContent = originalText;
+            consoleSendBtn.disabled = false;
+        }, 1000);
+    }
+}
+
+consoleSendBtn.addEventListener('click', sendConsoleMessage);
+
+consoleInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendConsoleMessage();
+    }
 });
 
 // --- Video Stream Management ---
@@ -440,6 +487,13 @@ socket.on('object_lists', (data) => {
     }
     if (data.list_b) {
         listBInput.value = data.list_b.join(', ');
+    }
+});
+
+socket.on('camera_status', (data) => {
+    if (data.enabled !== undefined) {
+        cameraToggle.checked = data.enabled;
+        cameraStatusText.textContent = data.enabled ? 'ON' : 'OFF';
     }
 });
 

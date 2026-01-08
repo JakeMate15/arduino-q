@@ -107,7 +107,16 @@
             <div class="right-column">
                 <!-- Video Feed Section -->
                 <div id="video-section" class="card video-section section-hidden">
-                    <h2>Cámara y Detecciones</h2>
+                    <div class="video-header">
+                        <h2>Cámara y Detecciones</h2>
+                        <div class="camera-controls">
+                            <label class="switch-camera">
+                                <input type="checkbox" id="camera-toggle" checked>
+                                <span class="slider-camera round"></span>
+                            </label>
+                            <span id="camera-status-text" class="camera-label">ON</span>
+                        </div>
+                    </div>
                     <div id="video-container">
                         <div id="video-placeholder" class="camera-status">
                             <p>Buscando cámara...</p>
@@ -118,6 +127,16 @@
                         <h3>Objetos Detectados</h3>
                         <ul id="recent-detections"></ul>
                     </div>
+                </div>
+
+                <!-- Console Message Section -->
+                <div id="console-section" class="card console-section section-hidden">
+                    <h2>Consola</h2>
+                    <div class="console-controls">
+                        <input type="text" id="console-input" placeholder="Escribe un mensaje..." />
+                        <button id="console-send-btn" class="btn-console">Enviar</button>
+                    </div>
+                    <p class="hint">Los mensajes se imprimirán en la consola de Python</p>
                 </div>
 
                 <!-- Auto mode indicator -->

@@ -1,8 +1,7 @@
 """
-Robot Joystick Control - Main Application
-Orchestrates controllers (Manual, Auto) and handles WebSocket communication.
+Control de Robot con Joystick - Aplicación Principal
+Orquesta controladores (Manual, Automático) y maneja comunicación WebSocket
 """
-import os
 from datetime import datetime, UTC
 from arduino.app_utils import App, Bridge, Logger
 from arduino.app_bricks.web_ui import WebUI
@@ -10,48 +9,40 @@ from arduino.app_bricks.video_objectdetection import VideoObjectDetection
 
 from controllers import ManualController, AutoController
 
-# --- Initialization ---
 logger = Logger("robot-joystick-control")
 web_ui = WebUI()
 
-# --- Video Object Detection ---
+# Detección de objetos con cámara
 detection_stream = VideoObjectDetection(confidence=0.5, debounce_sec=0.0)
+camera_enabled = True
 
-# --- Controllers ---
+# Controladores disponibles
 controllers = {
     "manual": ManualController(),
     "auto": AutoController()
 }
 
-# Active mode and controller
 active_mode = "manual"
 active_controller = controllers["manual"]
 
-# --- State ---
+# Estado
 ultimo_pwm_izq = 0
 ultimo_pwm_der = 0
-auto_active = False  # State for auto controller activation
-ciclos_ui = 0        # Counter to throttle UI updates
-
-# Log startup info
-logger.info("Controladores disponibles: manual, auto")
-
-# Storage for all detected objects
+auto_active = False
+ciclos_ui = 0  # Contador para limitar actualizaciones de UI
 all_detected_objects = {}
+
+logger.info("Controladores disponibles: manual, auto")
 
 
 def on_detect_objects(detections: dict):
-    """
-    Callback for when objects are detected by camera.
-    Updates the auto controller and sends detections to UI.
-    """
+    """Callback cuando la cámara detecta objetos"""
     global all_detected_objects
     all_detected_objects = detections
 
-    # Update auto controller with new detections
     controllers["auto"].update_detections(detections)
 
-    # Send each detection to UI
+    # Enviar cada detección a la interfaz web
     for obj_name, obj_data in detections.items():
         entry = {
             "content": obj_name,
@@ -61,59 +52,37 @@ def on_detect_objects(detections: dict):
         web_ui.send_message("detection", message=entry)
 
 
-# Register object detection callback
 detection_stream.on_detect_all(on_detect_objects)
 
 
 def set_mode(mode: str) -> bool:
-    """
-    Switch to a different control mode.
-
-    Args:
-        mode: One of 'manual', 'auto'
-
-    Returns:
-        True if mode was changed successfully
-    """
+    """Cambia el modo de control del robot"""
     global active_mode, active_controller, auto_active
 
     if mode not in controllers:
         logger.warning(f"Modo desconocido: {mode}")
         return False
 
-    # Deactivate current controller
     active_controller.on_deactivate()
-
-    # Stop motors when switching modes
     Bridge.notify("detener")
 
-    # Switch to new controller
     active_mode = mode
     active_controller = controllers[mode]
     active_controller.on_activate()
-
-    # Reset auto activation when switching
     auto_active = False
 
     logger.info(f"Modo cambiado a: {mode}")
     web_ui.send_message("mode_changed", {"mode": mode})
-    web_ui.send_message("status", {"message": f"Modo: {mode.upper()}"})
-
     return True
 
 
 def al_recibir_distancias(d_frontal: float, d_derecho: float):
-    """
-    Callback for sensor data from Arduino.
-    Processes data through active controller and sends commands.
-    """
+    """Callback de sensores del Arduino - Procesa datos y envía comandos"""
     global ultimo_pwm_izq, ultimo_pwm_der, auto_active, ciclos_ui
 
-    # Throttle UI updates: Only send every 5th message (~10Hz if input is 50Hz)
     ciclos_ui += 1
-    update_ui = (ciclos_ui % 5 == 0)
+    update_ui = (ciclos_ui % 5 == 0)  # Actualizar UI cada 5 ciclos (~10Hz)
 
-    # Send sensor data to UI (throttled)
     if update_ui:
         try:
             web_ui.send_message("sensores", {
@@ -121,47 +90,38 @@ def al_recibir_distancias(d_frontal: float, d_derecho: float):
                 "derecho": round(d_derecho, 1)
             })
         except Exception as e:
-            logger.warning(f"Error enviando sensores al UI: {e}")
+            logger.warning(f"Error enviando sensores: {e}")
 
-    # Process through active controller (only for autonomous mode)
-    # This remains at full speed (50Hz) for precision
-    if active_mode == "auto":
-        # Only compute if auto mode is active
-        if not auto_active:
-            return
-
+    if active_mode == "auto" and auto_active:
         try:
             pwm_izq, pwm_der = active_controller.compute(d_frontal, d_derecho)
             ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
 
-            # Send to Arduino (using notify to avoid timeouts at 50Hz)
             Bridge.notify("motores", pwm_izq, pwm_der)
 
-            # Update UI (throttled)
             if update_ui:
                 web_ui.send_message("motores", {
                     "izquierdo": pwm_izq,
                     "derecho": pwm_der
                 })
         except Exception as e:
-            logger.warning(f"Error en controlador {active_mode}: {e}")
+            logger.warning(f"Error en controlador auto: {e}")
 
 
 def on_joystick_move(sid, data):
-    """Handle joystick input from frontend."""
+    """Maneja entrada del joystick desde la interfaz web"""
     global ultimo_pwm_izq, ultimo_pwm_der
-    
-    # Only process in manual mode
+
     if active_mode != "manual":
         return
-    
+
     x = data.get("x", 0)
     y = data.get("y", 0)
-    
+
     manual = controllers["manual"]
     pwm_izq, pwm_der = manual.process_joystick(x, y)
     ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
-    
+
     try:
         Bridge.notify("joystick", x, y)
         web_ui.send_message("motores", {
@@ -173,20 +133,19 @@ def on_joystick_move(sid, data):
 
 
 def on_girar(sid, data):
-    """Handle turn button input from frontend."""
+    """Maneja botones de giro desde la interfaz web"""
     global ultimo_pwm_izq, ultimo_pwm_der
-    
-    # Only process in manual mode
+
     if active_mode != "manual":
         return
-    
+
     direccion = data.get("dir")
     accion = data.get("action")
-    
+
     manual = controllers["manual"]
     pwm_izq, pwm_der = manual.process_turn(direccion, accion)
     ultimo_pwm_izq, ultimo_pwm_der = pwm_izq, pwm_der
-    
+
     try:
         if accion == "stop":
             Bridge.notify("detener")
@@ -194,7 +153,7 @@ def on_girar(sid, data):
             Bridge.notify("girar_izq")
         elif direccion == "der":
             Bridge.notify("girar_der")
-        
+
         web_ui.send_message("motores", {
             "izquierdo": pwm_izq,
             "derecho": pwm_der
@@ -204,41 +163,60 @@ def on_girar(sid, data):
 
 
 def on_change_mode(sid, data):
-    """Handle mode change request from frontend."""
+    """Maneja cambio de modo desde la interfaz web"""
     mode = data.get("mode", "manual")
     set_mode(mode)
 
 
 def on_toggle_auto(sid, data):
-    """Handle auto mode activation toggle."""
+    """Activa/desactiva el controlador automático"""
     global auto_active
     auto_active = data.get("active", False)
     estado = "ACTIVADO" if auto_active else "DESACTIVADO"
-    logger.info(f"Auto: {estado}")
-    web_ui.send_message("auto_status", {"active": auto_active})
+    logger.info(f"Control automático: {estado}")
 
     if not auto_active:
-        # Stop motors if deactivated
         Bridge.notify("detener")
         web_ui.send_message("motores", {"izquierdo": 0, "derecho": 0})
 
 
 def on_set_object_lists(sid, data):
-    """Handle object lists update from frontend."""
+    """Actualiza listas de objetos para el controlador automático"""
     list_a = data.get("list_a", [])
     list_b = data.get("list_b", [])
     controllers["auto"].set_object_lists(list_a, list_b)
     logger.info(f"Listas actualizadas - A: {list_a}, B: {list_b}")
-    web_ui.send_message("status", {"message": "Listas de objetos actualizadas"})
 
 
 def on_override_confidence(sid, threshold):
-    """Handle confidence threshold override from frontend."""
+    """Actualiza umbral de confianza para detección de objetos"""
     detection_stream.override_threshold(threshold)
-    logger.info(f"Umbral de confianza actualizado: {threshold}")
+    logger.info(f"Umbral de confianza: {threshold}")
 
 
-# --- Register callbacks ---
+def on_toggle_camera(sid, data):
+    """Enciende/apaga la cámara"""
+    global camera_enabled
+    camera_enabled = data.get("enabled", True)
+
+    if camera_enabled:
+        detection_stream.start()
+        logger.info("Cámara encendida")
+    else:
+        detection_stream.stop()
+        logger.info("Cámara apagada")
+
+    web_ui.send_message("camera_status", {"enabled": camera_enabled})
+
+
+def on_console_message(sid, data):
+    """Imprime mensaje desde la interfaz web en la consola"""
+    message = data.get("message", "")
+    logger.info(f"[UI] {message}")
+    print(f"\n>>> Mensaje desde UI: {message}\n")
+
+
+# Registrar callbacks
 Bridge.provide("distancias", al_recibir_distancias)
 web_ui.on_message("joystick", on_joystick_move)
 web_ui.on_message("girar", on_girar)
@@ -246,20 +224,21 @@ web_ui.on_message("change_mode", on_change_mode)
 web_ui.on_message("toggle_auto", on_toggle_auto)
 web_ui.on_message("set_object_lists", on_set_object_lists)
 web_ui.on_message("override_th", on_override_confidence)
+web_ui.on_message("toggle_camera", on_toggle_camera)
+web_ui.on_message("console_message", on_console_message)
 
 
 @web_ui.on_connect
 def on_connect(sid):
-    """Handle new client connection."""
+    """Maneja nueva conexión de cliente"""
     logger.info(f"Cliente conectado: {sid}")
-
-    # Send current state to new client
     web_ui.send_message("status", {"message": "Conectado al robot"})
     web_ui.send_message("mode_changed", {"mode": active_mode})
     web_ui.send_message("object_lists", controllers["auto"].get_object_lists())
+    web_ui.send_message("camera_status", {"enabled": camera_enabled})
 
 
 if __name__ == "__main__":
-    logger.info("Iniciando Robot Joystick Control (Modular)...")
-    logger.info(f"Modos disponibles: {list(controllers.keys())}")
+    logger.info("Iniciando Control de Robot...")
+    logger.info(f"Modos: {list(controllers.keys())}")
     App.run()
