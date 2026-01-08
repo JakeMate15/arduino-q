@@ -123,27 +123,30 @@ confidenceSlider.addEventListener('input', (e) => {
 });
 
 // --- Video Stream Management ---
-let videoLoadInterval = null;
-
 function initVideoStream() {
     const currentHostname = window.location.hostname;
     const targetPort = 4912;
     const targetPath = '/embed';
     const streamUrl = `http://${currentHostname}:${targetPort}${targetPath}`;
 
-    videoIframe.onload = () => {
-        if (videoLoadInterval) {
-            clearInterval(videoLoadInterval);
-        }
+    // Only set the src once, don't keep reloading
+    if (!videoIframe.src || videoIframe.src === '') {
+        videoIframe.src = streamUrl;
+
+        videoIframe.onload = () => {
+            videoPlaceholder.style.display = 'none';
+            videoIframe.style.display = 'block';
+        };
+
+        videoIframe.onerror = () => {
+            console.warn('Error loading video stream');
+            // Don't hide placeholder if there's an error
+        };
+    } else {
+        // Video already loaded, just show it
         videoPlaceholder.style.display = 'none';
         videoIframe.style.display = 'block';
-    };
-
-    const startLoading = () => {
-        videoIframe.src = streamUrl;
-    };
-
-    videoLoadInterval = setInterval(startLoading, 1000);
+    }
 }
 
 // --- Detections Management ---
