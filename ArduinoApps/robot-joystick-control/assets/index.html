@@ -18,112 +18,113 @@
         </header>
 
         <main>
-            <!-- Mode Selector -->
-            <div class="mode-section card">
-                <h2>Modo de Control</h2>
-                <div class="mode-selector">
-                    <button id="mode-manual" class="mode-btn active" data-mode="manual">
-                        <span class="mode-icon">🎮</span>
-                        <span class="mode-name">Manual</span>
-                    </button>
-                    <button id="mode-auto" class="mode-btn" data-mode="auto">
-                        <span class="mode-icon">🤖</span>
-                        <span class="mode-name">Auto</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Auto Mode Controls (hidden by default) -->
-            <div id="auto-params-section" class="card auto-params-section section-hidden">
-                <div class="auto-header">
-                    <h2>Control Automático</h2>
-                    <div class="auto-switch-container">
-                        <label class="switch">
-                            <input type="checkbox" id="auto-toggle">
-                            <span class="slider round"></span>
-                        </label>
-                        <span id="auto-status-label" class="auto-label">OFF</span>
+            <!-- Left Column: Controls -->
+            <div class="left-column">
+                <!-- Mode Selector -->
+                <div class="mode-section card">
+                    <h2>Modo</h2>
+                    <div class="mode-selector">
+                        <button id="mode-manual" class="mode-btn active" data-mode="manual">
+                            <span class="mode-icon">🎮</span>
+                            <span class="mode-name">Manual</span>
+                        </button>
+                        <button id="mode-auto" class="mode-btn" data-mode="auto">
+                            <span class="mode-icon">🤖</span>
+                            <span class="mode-name">Auto</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Object Lists Configuration -->
-                <div class="object-lists-config">
-                    <div class="list-group">
-                        <label>Lista A (Adelante):</label>
-                        <input type="text" id="list-a-input" placeholder="cat, dog, person" value="cat, dog, person">
+                <!-- Joystick Section (Manual Mode) -->
+                <div class="joystick-section section-visible" id="joystick-section">
+                    <h2>Control Manual</h2>
+                    <div id="joystick-zone"></div>
+                    <div class="turn-buttons">
+                        <button id="btn-left" class="btn-turn">↺ Giro</button>
+                        <button id="btn-right" class="btn-turn">Giro ↻</button>
                     </div>
-                    <div class="list-group">
-                        <label>Lista B (Atrás):</label>
-                        <input type="text" id="list-b-input" placeholder="cell phone, cup, clock" value="cell phone, cup, clock">
-                    </div>
-                    <button id="update-lists-btn" class="btn-apply">Actualizar Listas</button>
+                    <p class="hint">Joystick o flechas del teclado</p>
                 </div>
 
-                <!-- Confidence Control -->
-                <div class="confidence-control">
-                    <label>Confianza mínima: <span id="confidence-value">0.50</span></label>
-                    <input type="range" id="confidence-slider" min="0" max="1" step="0.05" value="0.5">
-                </div>
-            </div>
-
-            <!-- Video Feed Section (hidden by default) -->
-            <div id="video-section" class="card video-section section-hidden">
-                <h2>Cámara</h2>
-                <div id="video-container">
-                    <div id="video-placeholder" class="camera-status">
-                        <p>Buscando cámara...</p>
+                <!-- Auto Mode Controls -->
+                <div id="auto-params-section" class="card auto-params-section section-hidden">
+                    <div class="auto-header">
+                        <h2>Control Automático</h2>
+                        <div class="auto-switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="auto-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span id="auto-status-label" class="auto-label">OFF</span>
+                        </div>
                     </div>
-                    <iframe id="video-iframe" title="Video stream" width="640" height="480" frameBorder="0" style="display: none;"></iframe>
-                </div>
-                <div class="detections-list">
-                    <h3>Detecciones Recientes</h3>
-                    <ul id="recent-detections"></ul>
-                </div>
-            </div>
 
-            <div class="telemetry-section">
-                <div class="card motors-card">
-                    <h2>Motores (PWM)</h2>
-                    <div class="motor-displays">
-                        <div class="motor-item">
-                            <span class="label">Izquierdo</span>
+                    <!-- Object Lists Configuration -->
+                    <div class="object-lists-config">
+                        <div class="list-group">
+                            <label>Lista A (Adelante):</label>
+                            <input type="text" id="list-a-input" placeholder="cat, dog, person" value="cat, dog, person">
+                        </div>
+                        <div class="list-group">
+                            <label>Lista B (Atrás):</label>
+                            <input type="text" id="list-b-input" placeholder="cell phone, cup, clock" value="cell phone, cup, clock">
+                        </div>
+                        <button id="update-lists-btn" class="btn-apply">Actualizar Listas</button>
+                    </div>
+
+                    <!-- Confidence Control -->
+                    <div class="confidence-control">
+                        <label>Confianza: <span id="confidence-value">0.50</span></label>
+                        <input type="range" id="confidence-slider" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                </div>
+
+                <!-- Telemetry (Always Visible) -->
+                <div class="card telemetry-card">
+                    <h2>Telemetría</h2>
+                    <div class="telemetry-grid">
+                        <div class="telemetry-item">
+                            <span class="label">Motor Izq.</span>
                             <div id="pwm-left" class="value">0</div>
                         </div>
-                        <div class="motor-item">
-                            <span class="label">Derecho</span>
+                        <div class="telemetry-item">
+                            <span class="label">Motor Der.</span>
                             <div id="pwm-right" class="value">0</div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="card sensors-card">
-                    <h2>Sensores (Distancia)</h2>
-                    <div class="sensor-displays">
-                        <div class="sensor-item">
-                            <span class="label">Frontal</span>
+                        <div class="telemetry-item">
+                            <span class="label">Dist. Frontal</span>
                             <div id="dist-frontal" class="value">-- cm</div>
                         </div>
-                        <div class="sensor-item">
-                            <span class="label">Derecho</span>
+                        <div class="telemetry-item">
+                            <span class="label">Dist. Derecho</span>
                             <div id="dist-derecho" class="value">-- cm</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="joystick-section section-visible" id="joystick-section">
-                <div id="joystick-zone"></div>
-                <div class="turn-buttons">
-                    <button id="btn-left" class="btn-turn">↺ Izquierda</button>
-                    <button id="btn-right" class="btn-turn">Derecha ↻</button>
+            <!-- Right Column: Video & Detections -->
+            <div class="right-column">
+                <!-- Video Feed Section -->
+                <div id="video-section" class="card video-section section-hidden">
+                    <h2>Cámara y Detecciones</h2>
+                    <div id="video-container">
+                        <div id="video-placeholder" class="camera-status">
+                            <p>Buscando cámara...</p>
+                        </div>
+                        <iframe id="video-iframe" title="Video stream" frameBorder="0" style="display: none;"></iframe>
+                    </div>
+                    <div class="detections-list">
+                        <h3>Objetos Detectados</h3>
+                        <ul id="recent-detections"></ul>
+                    </div>
                 </div>
-                <p class="hint">Usa el joystick o los botones de giro</p>
-            </div>
 
-            <!-- Auto mode indicator -->
-            <div id="auto-indicator" class="auto-indicator section-hidden">
-                <div class="auto-pulse"></div>
-                <span>Modo Autónomo Activo</span>
+                <!-- Auto mode indicator -->
+                <div id="auto-indicator" class="auto-indicator section-hidden">
+                    <div class="auto-pulse"></div>
+                    <span>Navegación Autónoma Activa</span>
+                </div>
             </div>
         </main>
 
