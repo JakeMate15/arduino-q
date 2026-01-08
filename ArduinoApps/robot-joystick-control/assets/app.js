@@ -20,43 +20,22 @@ const pwmRightEl = document.getElementById('pwm-right');
 const distFrontalEl = document.getElementById('dist-frontal');
 const distDerechoEl = document.getElementById('dist-derecho');
 const errorContainer = document.getElementById('error-container');
-const recToggle = document.getElementById('rec-toggle');
 const joystickSection = document.getElementById('joystick-section');
 const autoIndicator = document.getElementById('auto-indicator');
-const pidParamsSection = document.getElementById('pid-params-section');
-const pidToggle = document.getElementById('pid-toggle');
-const pidStatusLabel = document.getElementById('pid-status-label');
+const autoParamsSection = document.getElementById('auto-params-section');
+const autoToggle = document.getElementById('auto-toggle');
+const autoStatusLabel = document.getElementById('auto-status-label');
 
 // Mode buttons
 const modeBtns = document.querySelectorAll('.mode-btn');
 const modeManual = document.getElementById('mode-manual');
-const modePid = document.getElementById('mode-pid');
-const modeIa = document.getElementById('mode-ia');
-
-// PID parameter inputs
-const pidSetpoint = document.getElementById('pid-setpoint');
-const pidSpeed = document.getElementById('pid-speed');
-const pidKp = document.getElementById('pid-kp');
-const pidKi = document.getElementById('pid-ki');
-const pidKd = document.getElementById('pid-kd');
-const pidApply = document.getElementById('pid-apply');
-const pidAutotuneBtn = document.getElementById('pid-autotune');
-const autotuneContainer = document.getElementById('autotune-container');
-const autotuneBar = document.getElementById('autotune-bar');
-const autotunePercent = document.getElementById('autotune-percent');
-const pidDiagContainer = document.getElementById('pid-diag-container');
-const diagError = document.getElementById('diag-error');
-const diagCorr = document.getElementById('diag-corr');
-const diagP = document.getElementById('diag-p');
-const diagI = document.getElementById('diag-i');
-const diagD = document.getElementById('diag-d');
+const modeAuto = document.getElementById('mode-auto');
 
 // Inicializar Socket.IO
 const socket = io(`http://${window.location.host}`);
 
 // Estado actual
 let currentMode = 'manual';
-let iaAvailable = false;
 
 // Estado global de control
 let controlState = {
@@ -67,35 +46,28 @@ let controlState = {
 
 // --- Mode Management ---
 function setMode(mode) {
-    if (mode === 'ia' && !iaAvailable) {
-        console.warn('IA mode not available');
-        return;
-    }
-    
     currentMode = mode;
     socket.emit('change_mode', { mode: mode });
-    
+
     // Update UI
     modeBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
-    
+
     // Show/hide joystick section
     if (mode === 'manual') {
         joystickSection.style.display = 'flex';
         autoIndicator.style.display = 'none';
-        pidParamsSection.style.display = 'none';
-        pidDiagContainer.style.display = 'none';
-    } else {
+        autoParamsSection.style.display = 'none';
+    } else if (mode === 'auto') {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
-        pidParamsSection.style.display = mode === 'pid' ? 'block' : 'none';
-        pidDiagContainer.style.display = mode === 'pid' ? 'block' : 'none';
-        
-        // Always ensure PID is toggled OFF when switching modes for safety
-        if (pidToggle) {
-            pidToggle.checked = false;
-            pidStatusLabel.textContent = 'OFF';
+        autoParamsSection.style.display = 'block';
+
+        // Always ensure auto is toggled OFF when switching modes for safety
+        if (autoToggle) {
+            autoToggle.checked = false;
+            autoStatusLabel.textContent = 'OFF';
         }
     }
 }
@@ -103,36 +75,15 @@ function setMode(mode) {
 // Mode button click handlers
 modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        if (!btn.disabled) {
-            setMode(btn.dataset.mode);
-        }
+        setMode(btn.dataset.mode);
     });
 });
 
-// PID parameter apply button
-pidApply.addEventListener('click', () => {
-    socket.emit('pid_params', {
-        setpoint: parseFloat(pidSetpoint.value),
-        base_speed: parseInt(pidSpeed.value),
-        kp: parseFloat(pidKp.value),
-        ki: parseFloat(pidKi.value),
-        kd: parseFloat(pidKd.value)
-    });
-});
-
-// PID Autotune Button
-pidAutotuneBtn.addEventListener('click', () => {
-    setMode('autotune');
-    autotuneContainer.style.display = 'block';
-    autotuneBar.style.width = '0%';
-    autotunePercent.textContent = '0%';
-});
-
-// PID Activation Toggle
-pidToggle.addEventListener('change', (e) => {
+// Auto Activation Toggle
+autoToggle.addEventListener('change', (e) => {
     const active = e.target.checked;
-    socket.emit('toggle_pid', { active: active });
-    pidStatusLabel.textContent = active ? 'ON' : 'OFF';
+    socket.emit('toggle_auto', { active: active });
+    autoStatusLabel.textContent = active ? 'ON' : 'OFF';
 });
 
 // --- Keyboard Control ---
@@ -193,7 +144,7 @@ function updateControlFromKeyboard() {
 setInterval(() => {
     // Only send manual controls in manual mode
     if (currentMode !== 'manual') return;
-    
+
     if (controlState.type === 'joystick') {
         socket.emit('joystick', controlState.data);
     } else if (controlState.type === 'turn') {
@@ -202,11 +153,6 @@ setInterval(() => {
         socket.emit('joystick', { x: 0, y: 0 });
     }
 }, SEND_INTERVAL);
-
-// --- Recording ---
-recToggle.addEventListener('change', (e) => {
-    socket.emit('toggle_recording', { active: e.target.checked });
-});
 
 // --- Joystick (nipplejs) ---
 const joystickZone = document.getElementById('joystick-zone');
@@ -290,14 +236,7 @@ socket.on('sensores', (data) => {
     }
     if (data.derecho !== undefined) {
         distDerechoEl.textContent = `${data.derecho} cm`;
-        // Highlight when close to PID setpoint
-        const setpoint = parseFloat(pidSetpoint.value);
-        const diff = Math.abs(data.derecho - setpoint);
-        if (currentMode === 'pid' && diff < 3) {
-            distDerechoEl.style.color = '#2ecc71'; // Green when on target
-        } else {
-            distDerechoEl.style.color = '#00878F';
-        }
+        distDerechoEl.style.color = '#00878F';
     }
 });
 
@@ -310,74 +249,20 @@ socket.on('status', (data) => {
     console.log('Server status:', data.message);
 });
 
-socket.on('pid_diag', (data) => {
-    if (diagError) diagError.textContent = data.error;
-    if (diagCorr) diagCorr.textContent = data.correction;
-    if (diagP) diagP.textContent = data.p_term;
-    if (diagI) diagI.textContent = data.i_term;
-    if (diagD) diagD.textContent = data.d_term;
-    
-    // Cambiar color del error dinámicamente
-    if (Math.abs(data.error) < 1.0) {
-        diagError.style.color = 'var(--success-green)';
-    } else if (Math.abs(data.error) > 5.0) {
-        diagError.style.color = 'var(--error-red)';
-    } else {
-        diagError.style.color = 'var(--arduino-blue)';
-    }
-});
-
 socket.on('mode_changed', (data) => {
     currentMode = data.mode;
     modeBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === data.mode);
     });
-    
+
     // Update UI visibility
     if (data.mode === 'manual') {
         joystickSection.style.display = 'flex';
         autoIndicator.style.display = 'none';
-        pidParamsSection.style.display = 'none';
-    } else {
+        autoParamsSection.style.display = 'none';
+    } else if (data.mode === 'auto') {
         joystickSection.style.display = 'none';
         autoIndicator.style.display = 'flex';
-        pidParamsSection.style.display = data.mode === 'pid' ? 'block' : 'none';
+        autoParamsSection.style.display = 'block';
     }
-});
-
-socket.on('pid_params', (data) => {
-    // Update PID input fields with server values
-    if (data.setpoint !== undefined) pidSetpoint.value = data.setpoint;
-    if (data.base_speed !== undefined) pidSpeed.value = data.base_speed;
-    if (data.kp !== undefined) pidKp.value = data.kp;
-    if (data.ki !== undefined) pidKi.value = data.ki;
-    if (data.kd !== undefined) pidKd.value = data.kd;
-});
-
-socket.on('autotune_progress', (data) => {
-    const percent = Math.round(data.progress * 100) + '%';
-    autotuneBar.style.width = percent;
-    autotunePercent.textContent = percent;
-    
-    if (data.finished) {
-        const infoText = document.querySelector('.autotune-info span');
-        if (infoText) {
-            infoText.innerHTML = `✅ ¡Éxito! Kp:${data.kp} Ki:${data.ki} Kd:${data.kd}`;
-            infoText.style.color = 'var(--success-green)';
-        }
-        
-        setTimeout(() => {
-            autotuneContainer.style.display = 'none';
-            if (infoText) {
-                infoText.innerHTML = 'Calibrando... Mantén el robot cerca de la pared';
-                infoText.style.color = '';
-            }
-        }, 5000); // 5 seconds to read results
-    }
-});
-
-socket.on('ia_available', (data) => {
-    iaAvailable = data.available;
-    modeIa.disabled = !iaAvailable;
-    modeIa.title = iaAvailable ? 'Modo IA (XGBoost)' : 'Modelo IA no disponible - Entrena primero';
 });

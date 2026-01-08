@@ -1,5 +1,5 @@
 # Utils module
-from .recorder import Recorder
+# Currently empty - recorder functionality removed
 
-__all__ = ['Recorder']
+__all__ = []
 

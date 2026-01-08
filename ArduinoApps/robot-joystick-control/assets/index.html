@@ -14,13 +14,6 @@
             <h1>Control de Robot</h1>
             <div class="header-controls">
                 <div id="connection-status" class="status-disconnected">Desconectado</div>
-                <div class="recording-switch">
-                    <label class="switch">
-                        <input type="checkbox" id="rec-toggle">
-                        <span class="slider round"></span>
-                    </label>
-                    <span class="rec-label">REC</span>
-                </div>
             </div>
         </header>
 
@@ -33,87 +26,26 @@
                         <span class="mode-icon">🎮</span>
                         <span class="mode-name">Manual</span>
                     </button>
-                    <button id="mode-pid" class="mode-btn" data-mode="pid">
-                        <span class="mode-icon">🎯</span>
-                        <span class="mode-name">PID</span>
-                    </button>
-                    <button id="mode-ia" class="mode-btn" data-mode="ia" disabled>
+                    <button id="mode-auto" class="mode-btn" data-mode="auto">
                         <span class="mode-icon">🤖</span>
-                        <span class="mode-name">IA</span>
+                        <span class="mode-name">Auto</span>
                     </button>
                 </div>
             </div>
 
-            <!-- PID Parameters (hidden by default) -->
-            <div id="pid-params-section" class="card pid-params-section" style="display: none;">
-                <div class="pid-header">
-                    <h2>Parámetros PID</h2>
-                    <div class="pid-switch-container">
+            <!-- Auto Mode Controls (hidden by default) -->
+            <div id="auto-params-section" class="card auto-params-section" style="display: none;">
+                <div class="auto-header">
+                    <h2>Control Automático</h2>
+                    <div class="auto-switch-container">
                         <label class="switch">
-                            <input type="checkbox" id="pid-toggle">
+                            <input type="checkbox" id="auto-toggle">
                             <span class="slider round"></span>
                         </label>
-                        <span id="pid-status-label" class="pid-label">OFF</span>
+                        <span id="auto-status-label" class="auto-label">OFF</span>
                     </div>
                 </div>
-                <div class="pid-controls">
-                    <div class="pid-row">
-                        <label>
-                            <span>Distancia objetivo (cm)</span>
-                            <input type="number" id="pid-setpoint" value="15" min="5" max="50" step="1">
-                        </label>
-                        <label>
-                            <span>Velocidad base</span>
-                            <input type="number" id="pid-speed" value="100" min="50" max="200" step="10">
-                        </label>
-                    </div>
-                    <div class="pid-row">
-                        <label>
-                            <span>Kp</span>
-                            <input type="number" id="pid-kp" value="2.0" min="0" max="10" step="0.1">
-                        </label>
-                        <label>
-                            <span>Ki</span>
-                            <input type="number" id="pid-ki" value="0.1" min="0" max="2" step="0.01">
-                        </label>
-                        <label>
-                            <span>Kd</span>
-                            <input type="number" id="pid-kd" value="0.5" min="0" max="5" step="0.1">
-                        </label>
-                    </div>
-                    <button id="pid-apply" class="btn-apply">Aplicar</button>
-                    <button id="pid-autotune" class="btn-autotune">Auto-Calibrar</button>
-                </div>
-
-                <!-- PID Diagnostics -->
-                <div id="pid-diag-container" class="pid-diag-container" style="display: none;">
-                    <div class="diag-row">
-                        <div class="diag-item">
-                            <span class="diag-label">Error</span>
-                            <span id="diag-error" class="diag-value">0.0</span>
-                        </div>
-                        <div class="diag-item">
-                            <span class="diag-label">Corrección</span>
-                            <span id="diag-corr" class="diag-value">0.0</span>
-                        </div>
-                    </div>
-                    <div class="diag-row-compact">
-                        <div class="diag-mini">P: <span id="diag-p">0</span></div>
-                        <div class="diag-mini">I: <span id="diag-i">0</span></div>
-                        <div class="diag-mini">D: <span id="diag-d">0</span></div>
-                    </div>
-                </div>
-                
-                <!-- Autotune Progress (hidden by default) -->
-                <div id="autotune-container" class="autotune-container" style="display: none;">
-                    <div class="autotune-info">
-                        <span>Calibrando... Mantén el robot cerca de la pared</span>
-                        <span id="autotune-percent">0%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div id="autotune-bar" class="progress-fill"></div>
-                    </div>
-                </div>
+                <!-- Placeholder for future auto mode parameters -->
             </div>
 
             <div class="telemetry-section">
