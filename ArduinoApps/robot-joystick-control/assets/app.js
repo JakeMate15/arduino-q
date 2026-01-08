@@ -209,11 +209,21 @@ confidenceSlider.addEventListener('input', (e) => {
     socket.emit('override_th', value);
 });
 
-// Camera toggle
+// Camera toggle (solo oculta/muestra video, detección sigue activa)
 cameraToggle.addEventListener('change', (e) => {
     const enabled = e.target.checked;
     socket.emit('toggle_camera', { enabled: enabled });
     cameraStatusText.textContent = enabled ? 'ON' : 'OFF';
+
+    // Ocultar/mostrar el video visualmente
+    if (enabled) {
+        videoIframe.style.display = 'block';
+        videoPlaceholder.style.display = 'none';
+    } else {
+        videoIframe.style.display = 'none';
+        videoPlaceholder.innerHTML = '<p>Video oculto (detección activa)</p>';
+        videoPlaceholder.style.display = 'flex';
+    }
 });
 
 // Console message
@@ -494,6 +504,16 @@ socket.on('camera_status', (data) => {
     if (data.enabled !== undefined) {
         cameraToggle.checked = data.enabled;
         cameraStatusText.textContent = data.enabled ? 'ON' : 'OFF';
+
+        // Sincronizar visibilidad del video con el estado
+        if (data.enabled) {
+            videoIframe.style.display = 'block';
+            videoPlaceholder.style.display = 'none';
+        } else {
+            videoIframe.style.display = 'none';
+            videoPlaceholder.innerHTML = '<p>Video oculto (detección activa)</p>';
+            videoPlaceholder.style.display = 'flex';
+        }
     }
 });
 

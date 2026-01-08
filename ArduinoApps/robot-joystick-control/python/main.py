@@ -195,16 +195,14 @@ def on_override_confidence(sid, threshold):
 
 
 def on_toggle_camera(sid, data):
-    """Enciende/apaga la cámara"""
+    """Muestra/oculta el video (la detección sigue activa)"""
     global camera_enabled
     camera_enabled = data.get("enabled", True)
 
-    if camera_enabled:
-        detection_stream.start()
-        logger.info("Cámara encendida")
-    else:
-        detection_stream.stop()
-        logger.info("Cámara apagada")
+    # Solo enviamos el estado a la UI para ocultar/mostrar el video
+    # La detección de objetos sigue funcionando en segundo plano
+    estado = "visible" if camera_enabled else "oculto"
+    logger.info(f"Video stream: {estado}")
 
     web_ui.send_message("camera_status", {"enabled": camera_enabled})
 
