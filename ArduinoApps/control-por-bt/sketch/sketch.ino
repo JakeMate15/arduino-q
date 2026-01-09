@@ -19,6 +19,8 @@ const int VELOCIDAD_BASE = 100;
 const float VEL_SONIDO = 0.035103f;
 const float DISTANCIA_SEGURA = 20.0f;
 
+bool ejecutando_comando = false;
+
 float distanciaCM() {
   digitalWrite(TRIG_CENTRO, LOW);
   delayMicroseconds(2);
@@ -44,26 +46,39 @@ void mover_motores(int velA, int velB, int dirA, int dirB) {
 }
 
 void avanzar(int tiempo_ms) {
+  ejecutando_comando = true;
+
   if (!es_seguro_avanzar()) {
     mover_motores(0, 0, 0, 0);
+    ejecutando_comando = false;
     return;
   }
 
   mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 1);
   delay(tiempo_ms);
   mover_motores(0, 0, 0, 0);
+
+  ejecutando_comando = false;
 }
 
 void retroceder(int tiempo_ms) {
+  ejecutando_comando = true;
+
   mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 0, 0);
   delay(tiempo_ms);
   mover_motores(0, 0, 0, 0);
+
+  ejecutando_comando = false;
 }
 
 void girar(int tiempo_ms) {
+  ejecutando_comando = true;
+
   mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 0);
   delay(tiempo_ms);
   mover_motores(0, 0, 0, 0);
+
+  ejecutando_comando = false;
 }
 
 void blink(int times, int on_ms, int off_ms) {
@@ -79,19 +94,15 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
-  // Configurar pines de motores
   pinMode(DIR_A, OUTPUT);
   pinMode(DIR_B, OUTPUT);
 
-  // Configurar sensor ultrasónico
   pinMode(TRIG_CENTRO, OUTPUT);
   pinMode(ECHO_CENTRO, INPUT);
 
-  // Señal de arranque
   blink(2, 150, 150);
 
   if (!BLE.begin()) {
-    // Error: parpadeo rápido infinito
     while (1) {
       digitalWrite(LED, HIGH); delay(100);
       digitalWrite(LED, LOW);  delay(100);
@@ -106,7 +117,6 @@ void setup() {
 
   BLE.advertise();
 
-  // Listo/anunciando: 1 parpadeo
   blink(1, 300, 300);
 }
 
@@ -115,20 +125,18 @@ void loop() {
 
   BLEDevice central = BLE.central();
 
-  // Mientras NO haya conexión: parpadeo lento cada ~1s
   if (!central) {
     digitalWrite(LED, HIGH); delay(80);
     digitalWrite(LED, LOW);  delay(920);
     return;
   }
 
-  // Conectado: LED fijo encendido
   digitalWrite(LED, HIGH);
 
   while (central.connected()) {
     BLE.poll();
 
-    if (commandChar.written()) {
+    if (commandChar.written() && !ejecutando_comando) {
       String cmd = commandChar.value();
       cmd.trim();
 
@@ -144,7 +152,6 @@ void loop() {
     delay(10);
   }
 
-  // Desconectado: apagar LED y volver a anunciar/idle
   digitalWrite(LED, LOW);
   delay(100);
 }
