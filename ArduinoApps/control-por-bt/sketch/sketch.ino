@@ -60,28 +60,16 @@ void loop() {
     BLE.poll();
 
     if (commandChar.written()) {
-      // Se recibió algo: parpadeo rápido
-      blink(2, 60, 60);
-
       String cmd = commandChar.value();
       cmd.trim();
 
       if (cmd == "avanza") {
-        // Pulso largo
-        digitalWrite(LED, LOW); delay(80);
-        digitalWrite(LED, HIGH); delay(1000);
-        // moverAdelante();
-      } else if (cmd == "para") {
-        // 2 pulsos cortos
-        blink(2, 1000, 1000);
-        // detener();
-      } else {
-        // 3 pulsos: desconocido
-        blink(3, 1000, 1000);
+        // avanzar();
+      } else if (cmd == "retrocede") {
+        // retroceder();
+      } else (cmd == "gira") {
+        // girar();
       }
-
-      // Volver a estado conectado (LED fijo)
-      digitalWrite(LED, HIGH);
     }
 
     delay(10);
