@@ -13,6 +13,29 @@ const int LED = LED_BUILTIN;
 const bool MOTOR_B_INVERTIDO = true;
 const int VELOCIDAD_BASE = 100;
 
+// === ULTRASÓNICO ===
+#define TRIG_CENTRO 12
+#define ECHO_CENTRO 13
+const float VEL_SONIDO = 0.035103f;
+const float DISTANCIA_SEGURA = 20.0f;
+
+float distanciaCM() {
+  digitalWrite(TRIG_CENTRO, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_CENTRO, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_CENTRO, LOW);
+
+  unsigned long dur = pulseIn(ECHO_CENTRO, HIGH, 25000);
+  if (dur == 0) return -1.0f;
+  return (dur * VEL_SONIDO) / 2.0f;
+}
+
+bool es_seguro_avanzar() {
+  float dist = distanciaCM();
+  return (dist < 0 || dist >= DISTANCIA_SEGURA);
+}
+
 void mover_motores(int velA, int velB, int dirA, int dirB) {
   digitalWrite(DIR_A, dirA);
   digitalWrite(DIR_B, MOTOR_B_INVERTIDO ? (dirB ^ 1) : dirB);
@@ -21,6 +44,11 @@ void mover_motores(int velA, int velB, int dirA, int dirB) {
 }
 
 void avanzar(int tiempo_ms) {
+  if (!es_seguro_avanzar()) {
+    mover_motores(0, 0, 0, 0);
+    return;
+  }
+
   mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 1);
   delay(tiempo_ms);
   mover_motores(0, 0, 0, 0);
@@ -33,7 +61,6 @@ void retroceder(int tiempo_ms) {
 }
 
 void girar(int tiempo_ms) {
-  // Giro en el lugar: motor izq adelante, motor der atrás
   mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 0);
   delay(tiempo_ms);
   mover_motores(0, 0, 0, 0);
@@ -55,6 +82,10 @@ void setup() {
   // Configurar pines de motores
   pinMode(DIR_A, OUTPUT);
   pinMode(DIR_B, OUTPUT);
+
+  // Configurar sensor ultrasónico
+  pinMode(TRIG_CENTRO, OUTPUT);
+  pinMode(ECHO_CENTRO, INPUT);
 
   // Señal de arranque
   blink(2, 150, 150);
@@ -102,11 +133,11 @@ void loop() {
       cmd.trim();
 
       if (cmd == "avanza") {
-        // avanzar();
+        avanzar(1000);
       } else if (cmd == "retrocede") {
-        // retroceder();
-      } else (cmd == "gira") {
-        // girar();
+        retroceder(1000);
+      } else if (cmd == "gira") {
+        girar(1000);
       }
     }
 
