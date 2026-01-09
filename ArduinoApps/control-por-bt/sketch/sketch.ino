@@ -21,6 +21,15 @@ const float DISTANCIA_SEGURA = 20.0f;
 
 bool ejecutando_comando = false;
 
+unsigned long pulseInManual(uint8_t pin, uint8_t state, unsigned long timeout) {
+  unsigned long start = micros();
+  while (digitalRead(pin) == state) { if (micros() - start > timeout) return 0; }
+  while (digitalRead(pin) != state) { if (micros() - start > timeout) return 0; }
+  unsigned long pulseStart = micros();
+  while (digitalRead(pin) == state) { if (micros() - pulseStart > timeout) return 0; }
+  return micros() - pulseStart;
+}
+
 float distanciaCM() {
   digitalWrite(TRIG_CENTRO, LOW);
   delayMicroseconds(2);
@@ -28,7 +37,7 @@ float distanciaCM() {
   delayMicroseconds(10);
   digitalWrite(TRIG_CENTRO, LOW);
 
-  unsigned long dur = pulseIn(ECHO_CENTRO, HIGH, 25000);
+  unsigned long dur = pulseInManual(ECHO_CENTRO, HIGH, 25000);
   if (dur == 0) return -1.0f;
   return (dur * VEL_SONIDO) / 2.0f;
 }
