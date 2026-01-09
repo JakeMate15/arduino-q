@@ -52,6 +52,10 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
+  // Configurar pines de motores
+  pinMode(DIR_A, OUTPUT);
+  pinMode(DIR_B, OUTPUT);
+
   // Señal de arranque
   blink(2, 150, 150);
 
