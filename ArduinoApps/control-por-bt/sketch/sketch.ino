@@ -5,6 +5,40 @@ BLEStringCharacteristic commandChar("abcd", BLEWrite, 20);
 
 const int LED = LED_BUILTIN;
 
+// === MOTORES ===
+#define DIR_A 2
+#define PWM_A 5
+#define DIR_B 4
+#define PWM_B 6
+const bool MOTOR_B_INVERTIDO = true;
+const int VELOCIDAD_BASE = 100;
+
+void mover_motores(int velA, int velB, int dirA, int dirB) {
+  digitalWrite(DIR_A, dirA);
+  digitalWrite(DIR_B, MOTOR_B_INVERTIDO ? (dirB ^ 1) : dirB);
+  analogWrite(PWM_A, velA);
+  analogWrite(PWM_B, velB);
+}
+
+void avanzar(int tiempo_ms) {
+  mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 1);
+  delay(tiempo_ms);
+  mover_motores(0, 0, 0, 0);
+}
+
+void retroceder(int tiempo_ms) {
+  mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 0, 0);
+  delay(tiempo_ms);
+  mover_motores(0, 0, 0, 0);
+}
+
+void girar(int tiempo_ms) {
+  // Giro en el lugar: motor izq adelante, motor der atrás
+  mover_motores(VELOCIDAD_BASE, VELOCIDAD_BASE, 1, 0);
+  delay(tiempo_ms);
+  mover_motores(0, 0, 0, 0);
+}
+
 void blink(int times, int on_ms, int off_ms) {
   for (int i = 0; i < times; i++) {
     digitalWrite(LED, HIGH);
